@@ -2026,7 +2026,7 @@
 						TestTargetID = 27A3624B19BFB0E200F5A17F;
 					};
 					27A3624B19BFB0E200F5A17F = {
-						DevelopmentTeam = F42C985T48;
+						DevelopmentTeam = N4PCH5AXL5;
 						SystemCapabilities = {
 							com.apple.BackgroundModes = {
 								enabled = 1;
@@ -2047,7 +2047,7 @@
 					};
 					27DCF5BD22B193B5009A23C2 = {
 						CreatedOnToolsVersion = 10.2.1;
-						DevelopmentTeam = F42C985T48;
+						DevelopmentTeam = N4PCH5AXL5;
 						ProvisioningStyle = Automatic;
 						SystemCapabilities = {
 							com.apple.ApplicationGroups.iOS = {
@@ -2057,7 +2057,7 @@
 					};
 					27DCF5C922B193B7009A23C2 = {
 						CreatedOnToolsVersion = 10.2.1;
-						DevelopmentTeam = F42C985T48;
+						DevelopmentTeam = N4PCH5AXL5;
 						ProvisioningStyle = Automatic;
 						SystemCapabilities = {
 							com.apple.BackgroundModes.watchos.extension = {
@@ -2790,7 +2790,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = Tests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
@@ -2821,7 +2821,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = Tests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
@@ -2970,7 +2970,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "$(SRCROOT)/IOS/App-Prefix.pch";
 				INFOPLIST_FILE = "$(SRCROOT)/IOS/App-Info.plist";
@@ -2980,7 +2980,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
@@ -2995,7 +2995,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "$(SRCROOT)/IOS/App-Prefix.pch";
 				INFOPLIST_FILE = "$(SRCROOT)/IOS/App-Info.plist";
@@ -3005,7 +3005,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
@@ -3028,14 +3028,14 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				IBSC_MODULE = OpenWorkoutTrackerWatch_Extension;
 				INFOPLIST_FILE = "$(SRCROOT)/Watch/Info.plist";
 				MARKETING_VERSION = 2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker.watchkitapp";
 				PRODUCT_NAME = OpenWorkoutTracker;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -3061,14 +3061,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				IBSC_MODULE = OpenWorkoutTrackerWatch_Extension;
 				INFOPLIST_FILE = "$(SRCROOT)/Watch/Info.plist";
 				MARKETING_VERSION = 2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker.watchkitapp";
 				PRODUCT_NAME = OpenWorkoutTracker;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -3091,7 +3091,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Watch Extension.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = "$(SRCROOT)/Watch Extension/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3102,7 +3102,7 @@
 				MARKETING_VERSION = 2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp.watchkitextension";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker.watchkitapp.watchkitextension";
 				PRODUCT_NAME = "OpenWorkoutTrackerWatch Extension";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -3126,7 +3126,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = "$(SRCROOT)/Watch Extension/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3137,7 +3137,7 @@
 				MARKETING_VERSION = 2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp.watchkitextension";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker.watchkitapp.watchkitextension";
 				PRODUCT_NAME = "OpenWorkoutTrackerWatch Extension";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;

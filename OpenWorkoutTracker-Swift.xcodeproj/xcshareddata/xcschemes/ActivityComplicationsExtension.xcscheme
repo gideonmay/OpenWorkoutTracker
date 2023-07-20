@@ -74,12 +74,21 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
+            BlueprintIdentifier = "27E60908292D13D900401901"
+            BuildableName = "ActivityComplicationsExtension.appex"
+            BlueprintName = "ActivityComplicationsExtension"
+            ReferencedContainer = "container:OpenWorkoutTracker-Swift.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
             BlueprintIdentifier = "278D92BF28E38F17003B077C"
             BuildableName = "OpenWorkoutTracker.app"
             BlueprintName = "OpenWorkoutTracker"
             ReferencedContainer = "container:OpenWorkoutTracker-Swift.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "_XCWidgetKind"

@@ -187,7 +187,7 @@ class WatchSession : NSObject, WCSessionDelegate, ObservableObject {
 
 	/// @brief Called when the watch is requesting a session key so that it can authenticate with the (optional) server.
 	func generateWatchSessionKey(replyHandler: ([String : Any]) -> Void) {
-		let cookies = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: "group.mjs-software.OpenWorkoutTracker").cookies
+		let cookies = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: "group.1016.OpenWorkoutTracker").cookies
 		if cookies != nil {
 			for cookie in cookies! {
 				if cookie.value(forKey: HTTPCookiePropertyKey.name.rawValue) as! String == SESSION_COOKIE_NAME {
@@ -328,7 +328,7 @@ class WatchSession : NSObject, WCSessionDelegate, ObservableObject {
 				var endTime: time_t = 0
 
 				if GetHistoricalActivityStartAndEndTime(activityIndex, &startTime, &endTime) {
-					let groupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.mjs-software.OpenWorkoutTracker")
+					let groupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.1016.OpenWorkoutTracker")
 					if groupUrl != nil {
 						let summary = ActivitySummary()
 						summary.id = activityId

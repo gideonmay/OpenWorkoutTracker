@@ -1994,7 +1994,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_ASSET_PATHS = "\"Watch App/Preview Content\"";
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "OpenWorkoutTracker-Watch-App-Info.plist";
@@ -2002,13 +2002,13 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthKit access is required to read and write health and workout data.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthKit access is required to read and write health and workout data.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.mjs-software.OpenWorkoutTracker";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = nl.1016.OpenWorkoutTracker;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -2030,7 +2030,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_ASSET_PATHS = "\"Watch App/Preview Content\"";
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "OpenWorkoutTracker-Watch-App-Info.plist";
@@ -2038,13 +2038,13 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthKit access is required to read and write health and workout data.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthKit access is required to read and write health and workout data.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.mjs-software.OpenWorkoutTracker";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = nl.1016.OpenWorkoutTracker;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -2068,13 +2068,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_ASSET_PATHS = "\"iPhone App/Preview Content\"";
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "OpenWorkoutTracker-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = OpenWorkoutTracker;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthKit access is required to read and write health and workout data.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthKit access is required to read and write health and workout data.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Location Services are required when performing certain type of workouts.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Location Services are required when performing certain type of workouts.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location Services are required when performing certain type of workouts.";
@@ -2088,7 +2089,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2110,13 +2111,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_ASSET_PATHS = "\"iPhone App/Preview Content\"";
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "OpenWorkoutTracker-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = OpenWorkoutTracker;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthKit access is required to read and write health and workout data.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthKit access is required to read and write health and workout data.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Location Services are required when performing certain type of workouts.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Location Services are required when performing certain type of workouts.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location Services are required when performing certain type of workouts.";
@@ -2130,7 +2132,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2148,11 +2150,11 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTrackerTests";
+				PRODUCT_BUNDLE_IDENTIFIER = conl.1016.OpenWorkoutTrackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2169,11 +2171,11 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTrackerTests";
+				PRODUCT_BUNDLE_IDENTIFIER = conl.1016.OpenWorkoutTrackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2190,11 +2192,11 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTrackerUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTrackerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2210,11 +2212,11 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTrackerUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTrackerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2232,10 +2234,10 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker-Watch-AppTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2253,10 +2255,10 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker-Watch-AppTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2274,10 +2276,10 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker-Watch-AppUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2294,10 +2296,10 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker-Watch-AppUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = "nl.1016.OpenWorkoutTracker-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2316,7 +2318,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ActivityWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ActivityWidgets;
@@ -2328,7 +2330,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.ActivityWidgets";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker.ActivityWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -2345,7 +2347,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ActivityWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ActivityWidgets;
@@ -2357,7 +2359,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.ActivityWidgets";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker.ActivityWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -2375,7 +2377,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ActivityComplications/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ActivityComplications;
@@ -2387,7 +2389,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp.ActivityComplications";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker.watchkitapp.ActivityComplications;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -2405,7 +2407,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = F42C985T48;
+				DEVELOPMENT_TEAM = N4PCH5AXL5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ActivityComplications/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ActivityComplications;
@@ -2417,7 +2419,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mjs-software.OpenWorkoutTracker.watchkitapp.ActivityComplications";
+				PRODUCT_BUNDLE_IDENTIFIER = nl.1016.OpenWorkoutTracker.watchkitapp.ActivityComplications;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;

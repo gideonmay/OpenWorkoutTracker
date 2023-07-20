@@ -57,7 +57,7 @@
 	<string>This app uses nearby interactions to interact with nearby riders when cycling.</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.com.mjs-software.OpenWorkoutTracker</key>
+		<key>iCloud.nl.1016.OpenWorkoutTracker</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
