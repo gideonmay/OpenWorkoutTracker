@@ -17,7 +17,6 @@ class CommonApp : ObservableObject {
 	private var sensorMgr = SensorMgr.shared
 	private var broadcastMgr = BroadcastManager.shared
 	private var healthMgr = HealthManager.shared
-	private var apiClient = ApiClient.shared
 	var watchSession = WatchSession()
 	
 	/// Singleton constructor
@@ -38,7 +37,7 @@ class CommonApp : ObservableObject {
 		
 		// Are we supposed to use the optional web server?
 		if Preferences.shouldBroadcastToServer() {
-			let _ = self.apiClient.checkLoginStatus()
+			let _ = ApiClient.shared.checkLoginStatus()
 		}
 		
 		// Set the user's preferred unit system.
@@ -76,7 +75,7 @@ class CommonApp : ObservableObject {
 		NotificationCenter.default.addObserver(self, selector: #selector(self.activityStopped), name: Notification.Name(rawValue: NOTIFICATION_NAME_ACTIVITY_STOPPED), object: nil)
 		
 		// Sync with the server.
-		let _ = self.apiClient.syncWithServer()
+		let _ = ApiClient.shared.syncWithServer()
 	}
 	
 	/// @brief Sends the user's details to the backend. Should be called on application startup as well as whenever the values are changed.
@@ -128,7 +127,7 @@ class CommonApp : ObservableObject {
 			if let responseCode = data[KEY_NAME_RESPONSE_CODE] as? HTTPURLResponse {
 				if responseCode.statusCode == 200 {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_SUCCESS
-					let _ = self.apiClient.syncWithServer()
+					let _ = ApiClient.shared.syncWithServer()
 				}
 				else {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_FAILURE
@@ -160,10 +159,14 @@ class CommonApp : ObservableObject {
 								
 								let cookie = HTTPCookie(properties: cookieProperties)
 								HTTPCookieStorage.shared.setCookie(cookie!)
+								
+								if let userId = sessionDict["user_id"] as? String {
+									Preferences.setUserId(value: userId)
+								}
 							}
 						}
 						
-						let _ = self.apiClient.syncWithServer() // re-sync
+						let _ = ApiClient.shared.syncWithServer() // re-sync
 					}
 					else {
 						ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_FAILURE
@@ -180,7 +183,7 @@ class CommonApp : ObservableObject {
 			if let responseCode = data[KEY_NAME_RESPONSE_CODE] as? HTTPURLResponse {
 				if responseCode.statusCode == 200 {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_SUCCESS
-					let _ = self.apiClient.syncWithServer() // re-sync
+					let _ = ApiClient.shared.syncWithServer() // re-sync
 				}
 				else {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_FAILURE
@@ -192,7 +195,7 @@ class CommonApp : ObservableObject {
 	@objc func logoutProcessed(notification: NSNotification) {
 		if let data = notification.object as? Dictionary<String, AnyObject> {
 			if let responseCode = data[KEY_NAME_RESPONSE_CODE] as? HTTPURLResponse {
-				if responseCode.statusCode == 200 {
+				if responseCode.statusCode == 200 || responseCode.statusCode == 403 {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_FAILURE
 				}
 			}
@@ -238,15 +241,38 @@ class CommonApp : ObservableObject {
 	@objc func downloadedActivityReceived(notification: NSNotification) {
 		do {
 			if let data = notification.object as? Dictionary<String, AnyObject> {
-				if let responseData = data[KEY_NAME_RESPONSE_DATA] as? String {
-					let directory = NSTemporaryDirectory()
-					let fileName = NSUUID().uuidString
-					let fullUrl = NSURL.fileURL(withPathComponents: [directory, fileName])
+				if let responseData = data[KEY_NAME_RESPONSE_DATA] as? Data,
+				   let requestUrl = data[KEY_NAME_URL] as? URL {
 					
-					if fullUrl != nil {
-						try responseData.write(to: fullUrl!, atomically: false, encoding: .utf8)
-						ImportActivityFromFile(fullUrl?.absoluteString, nil, nil)
-						try FileManager.default.removeItem(at: fullUrl!)
+					// Parse the URL.
+					let components = URLComponents(url: requestUrl, resolvingAgainstBaseURL: false)!
+
+					if let queryItems = components.queryItems {
+						var activityId: String?
+						var activityType: String = ""
+						var exportFormat: String?
+
+						// Grab the activity ID and file format out of the URL parameters.
+						for queryItem in queryItems {
+							if queryItem.name == PARAM_ACTIVITY_ID {
+								activityId = queryItem.value!
+							}
+							else if queryItem.name == PARAM_EXPORT_FORMAT {
+								exportFormat = queryItem.value!
+							}
+						}
+
+						if activityId != nil && exportFormat != nil {
+							let directory = NSTemporaryDirectory()
+							let fileName = NSUUID().uuidString + "." + exportFormat!
+							let fullUrl = NSURL.fileURL(withPathComponents: [directory, fileName])
+							
+							if fullUrl != nil {
+								try responseData.write(to: fullUrl!)
+								ImportActivityFromFile(fullUrl?.absoluteString, activityType, activityId)
+								try FileManager.default.removeItem(at: fullUrl!)
+							}
+						}
 					}
 				}
 			}
@@ -345,6 +371,7 @@ class CommonApp : ObservableObject {
 		}
 	}
 	
+	/// @brief The app requests a list of activities since a particular timestamp; this method is called for the response, which is a list of activit IDs
 	@objc func unsynchedActivitiesListReceived(notification: NSNotification) {
 		do {
 			if let data = notification.object as? Dictionary<String, AnyObject> {
@@ -352,8 +379,8 @@ class CommonApp : ObservableObject {
 					let activitiesIdList = try JSONSerialization.jsonObject(with: responseData, options: []) as! [String]
 
 					for activityId in activitiesIdList {
-						if IsActivityInDatabase(activityId) {
-							let _ = self.apiClient.exportActivity(activityId: activityId)
+						if IsActivityInDatabase(activityId) == false {
+							let _ = ApiClient.shared.exportActivity(activityId: activityId)
 						}
 					}
 				}
@@ -364,6 +391,7 @@ class CommonApp : ObservableObject {
 		}
 	}
 	
+	/// @brief The app sends a list of activities to the server; this method is called for each response.
 	@objc func hasActivityResponse(notification: NSNotification) {
 		do {
 			if let data = notification.object as? Dictionary<String, AnyObject> {
