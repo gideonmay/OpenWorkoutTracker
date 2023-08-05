@@ -18,7 +18,8 @@ struct SettingsView: View {
 	@State private var broadcastServer: String = Preferences.broadcastHostName()
 	@State private var showingLogoutError: Bool = false
 	@State private var showingResetConfirmation: Bool = false
-	@ObservedObject var updateRate = NumbersOnly(initialValue: Preferences.broadcastRate())
+	@ObservedObject private var updateRate = NumbersOnly(initialValue: Preferences.broadcastRate())
+	@ObservedObject private var apiClient = ApiClient.shared
 
 	var body: some View {
 		VStack(alignment: .center) {
@@ -105,7 +106,7 @@ struct SettingsView: View {
 
 			HStack() {
 				if Preferences.shouldBroadcastToServer() {
-					if ApiClient.shared.loginStatus == LoginStatus.LOGIN_STATUS_SUCCESS {
+					if self.apiClient.loginStatus == LoginStatus.LOGIN_STATUS_SUCCESS {
 						Button {
 							if !ApiClient.shared.logout() {
 								self.showingLogoutError = true
@@ -134,7 +135,18 @@ struct SettingsView: View {
 							.background(RoundedRectangle(cornerRadius: 10, style: .continuous))
 							.opacity(0.8)
 							.bold()
-							
+
+							NavigationLink(destination: CreateLoginView()) {
+								Text("Create Login")
+									.foregroundColor(self.colorScheme == .dark ? .black : .white)
+									.fontWeight(Font.Weight.heavy)
+									.frame(minWidth: 0, maxWidth: .infinity)
+									.padding()
+							}
+							.background(RoundedRectangle(cornerRadius: 10, style: .continuous))
+							.opacity(0.8)
+							.bold()
+
 							// Reset button
 							Button {
 								self.showingResetConfirmation = true
