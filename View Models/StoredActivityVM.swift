@@ -20,7 +20,7 @@ func tagsCallback(name: Optional<UnsafePointer<Int8>>, context: Optional<UnsafeM
 	typedPointer.pointee.tags.append(tag)
 }
 
-class StoredActivityVM : ObservableObject {
+class StoredActivityVM : ObservableObject, Identifiable, Hashable, Equatable {
 	enum State {
 		case empty
 		case loaded
@@ -63,6 +63,17 @@ class StoredActivityVM : ObservableObject {
 		self.activityIndex = activitySummary.index
 	}
 	
+	/// @brief Hashable overrides
+	func hash(into hasher: inout Hasher) {
+		hasher.combine(self.activityId)
+		hasher.combine(self.state)
+	}
+	
+	/// @brief Equatable overrides
+	static func == (lhs: StoredActivityVM, rhs: StoredActivityVM) -> Bool {
+		return lhs.activityId == rhs.activityId && lhs.state == rhs.state
+	}
+	
 	func load() {
 		// Activity is from the app database.
 		if self.source == ActivitySummary.Source.database {
@@ -94,7 +105,9 @@ class StoredActivityVM : ObservableObject {
 		}
 		
 		DispatchQueue.main.async {
-			self.state = State.loaded
+			if self.state != State.loaded {
+				self.state = State.loaded
+			}
 		}
 	}
 	
