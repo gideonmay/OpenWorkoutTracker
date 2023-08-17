@@ -667,6 +667,7 @@
 		27E60910292D13DA00401901 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		27E60912292D13DA00401901 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		27E6091C292D4EEC00401901 /* ActivityVM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityVM.swift; sourceTree = "<group>"; };
+		F39009782A8E454200C331A9 /* OpenWorkoutTracker Watch AppRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "OpenWorkoutTracker Watch AppRelease.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1065,6 +1066,7 @@
 		278D92B728E38F17003B077C = {
 			isa = PBXGroup;
 			children = (
+				F39009782A8E454200C331A9 /* OpenWorkoutTracker Watch AppRelease.entitlements */,
 				27091AD62A7C53370013AD48 /* Launch Screen.storyboard */,
 				273C418429075C9800273B64 /* OpenWorkoutTracker Watch App.entitlements */,
 				2740E11228EB97B800293B71 /* OpenWorkoutTracker-Watch-App-Info.plist */,
@@ -2034,7 +2036,7 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "OpenWorkoutTracker Watch App.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "OpenWorkoutTracker Watch AppRelease.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_ASSET_PATHS = "\"Watch App/Preview Content\"";
