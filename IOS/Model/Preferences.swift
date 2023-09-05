@@ -76,7 +76,8 @@ let MAX_BROADCAST_RATE = 5
 
 let DEFAULT_BROADCAST_RATE =    30
 let DEFAULT_PROTOCOL =          "https"
-let DEFAULT_HOST_NAME =         "openworkout.cloud"
+//let DEFAULT_HOST_NAME =         "openworkout.cloud"
+let DEFAULT_HOST_NAME =         "owo.1016.nl"
 let DEFAULT_POOL_LENGTH =       25
 let DEFAULT_POOL_LENGTH_UNITS = UNIT_SYSTEM_METRIC
 
@@ -314,11 +315,13 @@ class Preferences {
 	}
 	
 	static func broadcastHostName() -> String {
+        /*
 		let mydefaults: UserDefaults = UserDefaults.standard
 		let result = mydefaults.string(forKey: PREF_NAME_BROADCAST_HOST_NAME)
 		if result != nil {
 			return result!
 		}
+        */
 		return DEFAULT_HOST_NAME
 	}
 	
