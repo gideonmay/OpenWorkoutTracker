@@ -11,10 +11,31 @@ struct HistoryDetailsView: View {
 	@Environment(\.colorScheme) var colorScheme
 	@Environment(\.dismiss) var dismiss
 	@StateObject var activityVM: StoredActivityVM
+	@State private var showingSyncSelection: Bool = false
 
 	private func loadDetails() {
 		DispatchQueue.global(qos: .userInitiated).async {
 			self.activityVM.load()
+		}
+	}
+	
+	private func sendToPhone() {
+		do {
+			let _ = try CommonApp.shared.watchSession.sendActivityFileToPhone(activityId: self.activityVM.activityId)
+		}
+		catch {
+			NSLog(error.localizedDescription)
+		}
+	}
+	
+	private func sendToServer() {
+		// Create a task for this to keep the app responsive.
+		Task.init {
+			do {
+				try await CommonApp.shared.exportActivityToWeb(activityId: self.activityVM.activityId)
+			} catch {
+				NSLog(error.localizedDescription)
+			}
 		}
 	}
 
@@ -52,6 +73,31 @@ struct HistoryDetailsView: View {
 					}
 					.frame(minHeight: minRowHeight * 3)
 					
+					// Sync button
+					if CommonApp.shared.watchSession.isConnected || Preferences.shouldBroadcastToServer() {
+						Button("Sync") {
+							self.showingSyncSelection = true
+						}
+						.confirmationDialog("Select the sync destination", isPresented: self.$showingSyncSelection, titleVisibility: .visible) {
+							if CommonApp.shared.watchSession.isConnected {
+								Button {
+									self.sendToPhone()
+								} label: {
+									Text("Phone")
+								}
+							}
+							if Preferences.shouldBroadcastToServer() {
+								Button {
+									self.sendToServer()
+								} label: {
+									Text("Web")
+								}
+							}
+						}
+						.bold()
+						.foregroundColor(self.colorScheme == .dark ? .white : .black)
+					}
+
 					// Close button
 					Button("Close") {
 						self.dismiss()

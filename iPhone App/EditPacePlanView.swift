@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct EditPacePlanView: View {
+	@Environment(\.colorScheme) var colorScheme
 	@Environment(\.dismiss) var dismiss
 	@StateObject private var pacePlansVM = PacePlansVM.shared
 
@@ -60,13 +61,18 @@ struct EditPacePlanView: View {
 			// Metadata: name, description, etc.
 			Group() {
 				Text("Name")
+					.font(.system(size: 24))
 					.bold()
 				TextField("Name", text: self.$tempName)
 					.onChange(of: self.tempName) { value in
 						self.tempPacePlan.name = tempName
 					}
+			}
+			.padding(SIDE_INSETS)
 
+			Group() {
 				Text("Description")
+					.font(.system(size: 24))
 					.bold()
 				TextField("Description", text: self.$tempDescription, axis: .vertical)
 					.lineLimit(2...10)
@@ -74,12 +80,14 @@ struct EditPacePlanView: View {
 						self.tempPacePlan.description = tempDescription
 					}
 			}
+			.padding(SIDE_INSETS)
 
 			Spacer()
 
 			// Plan details
 			Group() {
 				Text("Distance")
+					.font(.system(size: 24))
 					.bold()
 				HStack() {
 					TextField("Distance", text: self.$distanceEntry.value)
@@ -107,9 +115,11 @@ struct EditPacePlanView: View {
 						}
 					}
 				}
+				.padding(SIDE_INSETS)
 
 				Group() {
 					Text("Target Time (hh:mm:ss)")
+						.font(.system(size: 24))
 						.bold()
 					HStack() {
 						TextField("Time (hh:mm:ss)", text: self.$timeStr)
@@ -128,10 +138,12 @@ struct EditPacePlanView: View {
 							.alert("Invalid time format. Should be HH:MM:SS.", isPresented: self.$showingTimeError) {}
 					}
 				}
+				.padding(SIDE_INSETS)
 
 				Group() {
 					Group() {
 						Text("Splits (seconds)")
+							.font(.system(size: 24))
 							.bold()
 						Slider(value: Binding(
 							get: {
@@ -158,6 +170,7 @@ struct EditPacePlanView: View {
 						}
 					}
 				}
+				.padding(SIDE_INSETS)
 			}
 
 			Spacer()
@@ -186,7 +199,7 @@ struct EditPacePlanView: View {
 				}) {
 					Text("Save")
 						.frame(minWidth: 0, maxWidth: .infinity)
-						.foregroundColor(.white)
+						.foregroundColor(self.colorScheme == .dark ? .black : .white)
 						.padding()
 				}
 				.alert("Failed to create the pace plan.", isPresented: self.$showingSaveError) {}
@@ -195,11 +208,16 @@ struct EditPacePlanView: View {
 				.bold()
 
 				// Delete button
-				Button(action: { self.showingDeleteConfirmation = true }) {
-					Text("Delete")
-						.frame(minWidth: 0, maxWidth: .infinity)
-						.foregroundColor(.red)
-						.padding()
+				Button(action: {
+					self.showingDeleteConfirmation = true
+				}) {
+					HStack() {
+						Image(systemName: "trash")
+						Text("Delete")
+					}
+					.frame(minWidth: 0, maxWidth: .infinity)
+					.foregroundColor(.red)
+					.padding()
 				}
 				.background(RoundedRectangle(cornerRadius: 10, style: .continuous))
 				.alert("Are you sure you want to delete this workout? This cannot be undone.", isPresented: self.$showingDeleteConfirmation) {

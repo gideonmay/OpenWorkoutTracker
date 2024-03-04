@@ -27,15 +27,28 @@ class HealthManager {
 	
 	private var authorized = false
 	private let healthStore = HKHealthStore();
-	public var workouts: Dictionary<String, HKWorkout> = [:] // summaries of workouts stored in the health store, key is the activity ID which is generated automatically
+
+	public var workouts: Dictionary<String, HKWorkout> = [:] // Summaries of workouts stored in the health store, key is the activity ID which is generated automatically
 	public var currentHeartRate: Double = 0.0 // Most recent heart rate reading (Apple Watch)
 	public var heartRateRead: Bool = false // True if we are receiving heart rate data (Apple Watch)
-	private var locations: Dictionary<String, Array<CLLocation>> = [:] // arrays of locations stored in the health store, key is the activity ID
-	private var distances: Dictionary<String, Array<Double>> = [:] // arrays of distances computed from the locations array, key is the activity ID
-	private var speeds: Dictionary<String, Array<Double>> = [:] // arrays of speeds computed from the distances array, key is the activity ID
-	private var queryGroup: DispatchGroup = DispatchGroup() // tracks queries until they are completed
-	private var locationQueryGroup: DispatchGroup = DispatchGroup() // tracks location/route queries until they are completed
-	private var hrQuery: HKQuery? = nil // the query that reads heart rate on the watch
+
+	private var hrTopSampleBuf: [Double] = []
+	private var hrSum: Double = 0.0
+	private var totalHrSamples: UInt64 = 0
+	private var powerSampleBuf: [HKQuantitySample] = [] // Used when estimating the user's FTP from cycling power samples in HealthKit
+
+	public var estimatedMaxHr: Double? // Algorithmically estimated maximum heart rate
+	public var estimatedFtp: Double? // Algorithmically estimated cycling threshold power, in watts
+
+	private var locations: Dictionary<String, Array<CLLocation>> = [:] // Arrays of locations stored in the health store, key is the activity ID
+	private var distances: Dictionary<String, Array<Double>> = [:] // Arrays of distances computed from the locations array, key is the activity ID
+	private var speeds: Dictionary<String, Array<Double>> = [:] // Arrays of speeds computed from the distances array, key is the activity ID
+	private var queryGroup: DispatchGroup = DispatchGroup() // Tracks queries until they are completed
+	private var locationQueryGroup: DispatchGroup = DispatchGroup() // Tracks location/route queries until they are completed
+	private var hrQuery: HKQuery? = nil // The query that reads heart rate on the watch
+#if os(watchOS)
+	private var workoutSession: HKWorkoutSession? = nil
+#endif
 
 	/// Singleton constructor
 	private init() {
@@ -50,15 +63,15 @@ class HealthManager {
 		}
 		
 		// Request authorization for things to read and write.
-#if TARGET_OS_WATCH
+#if os(watchOS)
 		let heightType = HKObjectType.quantityType(forIdentifier: .height)!
 		let weightType = HKObjectType.quantityType(forIdentifier: .bodyMass)!
 		let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate)!
 		let activeEnergyBurnType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
 		let birthdayType = HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!
 		let biologicalSexType = HKObjectType.characteristicType(forIdentifier: .biologicalSex)!
-		let writeTypes = Set([heartRateType, activeEnergyBurnType])
-		let readTypes = Set([heartRateType, heightType, weightType, birthdayType, biologicalSexType])
+		var writeTypes = Set([heartRateType, activeEnergyBurnType])
+		var readTypes = Set([heartRateType, heightType, weightType, birthdayType, biologicalSexType])
 #else
 		let heightType = HKObjectType.quantityType(forIdentifier: .height)!
 		let weightType = HKObjectType.quantityType(forIdentifier: .bodyMass)!
@@ -73,20 +86,67 @@ class HealthManager {
 		let biologicalSexType = HKObjectType.characteristicType(forIdentifier: .biologicalSex)!
 		let routeType = HKObjectType.seriesType(forIdentifier: HKWorkoutRouteTypeIdentifier)!
 		let workoutType = HKObjectType.workoutType()
-		let writeTypes = Set([heightType, weightType, heartRateType, restingHeartRateType, vo2MaxType, cyclingType, runType, swimType, activeEnergyBurnType, workoutType, routeType])
-		let readTypes = Set([heightType, weightType, heartRateType, restingHeartRateType, vo2MaxType, birthdayType, biologicalSexType, workoutType, routeType])
+		var writeTypes = Set([heightType, weightType, heartRateType, restingHeartRateType, vo2MaxType, cyclingType, runType, swimType, activeEnergyBurnType, workoutType, routeType])
+		var readTypes = Set([heightType, weightType, heartRateType, restingHeartRateType, vo2MaxType, birthdayType, biologicalSexType, workoutType, routeType])
 #endif
+
+		// Have to do this down here since there's a version check.
+		if #available(iOS 17.0, macOS 14.0, watchOS 10.0, *) {
+			let powerType = HKObjectType.quantityType(forIdentifier: .cyclingPower)!
+			let ftpType = HKObjectType.quantityType(forIdentifier: .cyclingFunctionalThresholdPower)!
+
+			writeTypes.insert(powerType)
+			writeTypes.insert(ftpType)
+			readTypes.insert(powerType)
+			readTypes.insert(ftpType)
+		}
+
+		// Request authorization for all the things we need from HealthKit.
 		healthStore.requestAuthorization(toShare: writeTypes, read: readTypes) { result, error in
 			do {
-				try self.updateUsersAge()
-				try self.updateUsersHeight()
-				try self.updateUsersWeight()
-				try self.updateUsersRestingHr()
-				try self.updateUsersMaxHr()
-				try self.updateUsersVO2Max()
-				try self.getBestRecent5KEffort()
+				try self.getAge()
 			}
 			catch {
+				NSLog("Failed to read the user's age from HealthKit.")
+			}
+			do {
+				try self.getHeight()
+				try self.getWeight()
+			}
+			catch {
+				NSLog("Failed to read the user's height and weight from HealthKit.")
+			}
+			do {
+				try self.getRestingHr()
+#if !os(watchOS)
+				try self.estimateMaxHr()
+#endif
+			}
+			catch {
+				NSLog("Failed to read heart rate information from HealthKit.")
+			}
+			do {
+				try self.getVO2Max()
+			}
+			catch {
+				NSLog("Failed to read the VO2Max from HealthKit.")
+			}
+			do {
+#if !os(watchOS)
+				try self.getBestRecent5KEffort()
+#endif
+			}
+			catch {
+				NSLog("Failed to read the workout history from HealthKit.")
+			}
+			do {
+				try self.getFtp()
+#if !os(watchOS)
+				try self.estimateFtp()
+#endif
+			}
+			catch {
+				NSLog("Failed to read the cycling FTP from HealthKit.")
 			}
 		}
 	}
@@ -118,7 +178,8 @@ class HealthManager {
 		
 		let oneYear = (365.25 * 24.0 * 60.0 * 60.0)
 		let startDate = Date(timeIntervalSince1970: Date().timeIntervalSince1970 - oneYear)
-		let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: [.strictStartDate])
+		let endDate = Date()
+		let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate])
 		
 		let query = HKSampleQuery.init(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil, resultsHandler: { query, results, error in
 			
@@ -196,7 +257,7 @@ class HealthManager {
 	}
 
 	/// @brief Gets the user's age from HealthKit and updates the copy in our database.
-	func updateUsersAge() throws {
+	func getAge() throws {
 		let dateOfBirth = try self.healthStore.dateOfBirthComponents()
 		let gregorianCalendar = NSCalendar.init(calendarIdentifier: NSCalendar.Identifier.gregorian)!
 		let tempDate = gregorianCalendar.date(from: dateOfBirth)
@@ -205,13 +266,13 @@ class HealthManager {
 	}
 	
 	/// @brief Gets the user's height from HealthKit and updates the copy in our database.
-	func updateUsersHeight() throws {
+	func getHeight() throws {
 		let heightType = HKObjectType.quantityType(forIdentifier: .height)!
 		
 		self.mostRecentQuantitySampleOfType(quantityType: heightType) { sample, error in
-			if sample != nil {
+			if let heightSample = sample {
 				let heightUnit = HKUnit.meterUnit(with: HKMetricPrefix.centi)
-				let usersHeight = sample!.quantity.doubleValue(for: heightUnit)
+				let usersHeight = heightSample.quantity.doubleValue(for: heightUnit)
 
 				Preferences.setHeightCm(value: usersHeight)
 			}
@@ -219,13 +280,13 @@ class HealthManager {
 	}
 
 	/// @brief Gets the user's weight from HealthKit and updates the copy in our database.
-	func updateUsersWeight() throws {
+	func getWeight() throws {
 		let weightType = HKObjectType.quantityType(forIdentifier: .bodyMass)!
 		
 		self.mostRecentQuantitySampleOfType(quantityType: weightType) { sample, error in
-			if sample != nil {
+			if let weightSample = sample {
 				let weightUnit = HKUnit.gramUnit(with: HKMetricPrefix.kilo)
-				let usersWeight = sample!.quantity.doubleValue(for: weightUnit)
+				let usersWeight = weightSample.quantity.doubleValue(for: weightUnit)
 
 				Preferences.setWeightKg(value: usersWeight)
 			}
@@ -233,50 +294,167 @@ class HealthManager {
 	}
 	
 	/// @brief Gets the user's resting heart rate from HealthKit and updates the copy in our database.
-	func updateUsersRestingHr() throws {
+	func getRestingHr() throws {
 		let hrType = HKObjectType.quantityType(forIdentifier: .restingHeartRate)!
 		
 		self.mostRecentQuantitySampleOfType(quantityType: hrType) { sample, error in
-			if sample != nil {
+			if let restingHrSample = sample {
 				let hrUnit: HKUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
-				let restingHr = sample!.quantity.doubleValue(for: hrUnit)
+				let restingHr = restingHrSample.quantity.doubleValue(for: hrUnit)
 
 				Preferences.setEstimatedRestingHr(value: restingHr)
 			}
 		}
 	}
 	
+	func setRestingHr(hr: Double) {
+		let now = Date()
+		let hrUnit: HKUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+		let hrQuantity = HKQuantity.init(unit: hrUnit, doubleValue: hr)
+		let hrType = HKQuantityType.init(HKQuantityTypeIdentifier.restingHeartRate)
+		let hrSample = HKQuantitySample.init(type: hrType, quantity: hrQuantity, start: now, end: now)
+
+		self.healthStore.save(hrSample, withCompletion: { result, error in
+		})
+	}
+	
 	/// @brief Estimates the user's maximum heart rate from the last year of HealthKit data.
-	func updateUsersMaxHr() throws {
+	func estimateMaxHr() throws {
 		let hrType = HKObjectType.quantityType(forIdentifier: .heartRate)!
-		var maxHr: Double = Preferences.estimatedMaxHr()
 
 		self.recentQuantitySamplesOfType(quantityType: hrType) { sample, error in
-			if sample != nil {
+			if let hrSample = sample {
 				let hrUnit: HKUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
-				let hrValue = sample!.quantity.doubleValue(for: hrUnit)
+				let hrValue = hrSample.quantity.doubleValue(for: hrUnit)
+
+				self.hrSum += hrValue
+				self.totalHrSamples += 1
+
+				// Filtering out bad data, part 1: Apply the sigmoid squishification
+				// function to each reading, based on their offset from the mean.
+				let mean = self.hrSum / Double(self.totalHrSamples)
+				let offset = hrValue - mean
+				let sig = 1.0 / (1.0 + exp(-offset))
+				let squishedValue = hrValue * sig
 				
-				if hrValue > maxHr {
-					maxHr = hrValue
-					Preferences.setEstimatedMaxHr(value: maxHr)
+				// Filtering out bad data, part 2: Take the average of the
+				// highest HR readings.
+				let MAX_BUF_SIZE = 64
+				if self.hrTopSampleBuf.count == 0 || squishedValue > self.hrTopSampleBuf[0] {
+					self.hrTopSampleBuf.append(hrValue)
+					self.hrTopSampleBuf.sort()
+					if self.hrTopSampleBuf.count > MAX_BUF_SIZE {
+						self.hrTopSampleBuf.remove(at: 0)
+					}
+					
+					let bufSum = self.hrTopSampleBuf.reduce(0, +)
+					let bufAvg = bufSum / Double(self.hrTopSampleBuf.count)
+
+					if self.estimatedMaxHr == nil || bufAvg > self.estimatedMaxHr! {
+						self.estimatedMaxHr = hrValue
+						Preferences.setEstimatedMaxHr(value: self.estimatedMaxHr!)
+					}
 				}
 			}
 		}
 	}
 
-	/// @brief Gets the user's VO2Max from HealthKit .
-	func updateUsersVO2Max() throws {
+	/// @brief Gets the user's VO2Max from HealthKit  and updates the copy in our database.
+	func getVO2Max() throws {
 		let vo2MaxType = HKObjectType.quantityType(forIdentifier: .vo2Max)!
 		
 		self.mostRecentQuantitySampleOfType(quantityType: vo2MaxType) { sample, error in
-			if sample != nil {
+			if let vo2MaxSample = sample {
 				let kgmin = HKUnit.gramUnit(with: .kilo).unitMultiplied(by: .minute())
-				let mL = HKUnit.literUnit(with: .milli)
-				let vo2MaxUnit = mL.unitDivided(by: kgmin)
-				let vo2Max = sample!.quantity.doubleValue(for: vo2MaxUnit)
+				let vo2MaxUnit = HKUnit.literUnit(with: .milli).unitDivided(by: kgmin)
+				let vo2Max = vo2MaxSample.quantity.doubleValue(for: vo2MaxUnit)
 				
 				Preferences.setEstimatedVO2Max(value: vo2Max)
 			}
+		}
+	}
+
+	func setVO2Max(vo2Max: Double) {
+		let now = Date()
+		let kgmin = HKUnit.gramUnit(with: .kilo).unitMultiplied(by: .minute())
+		let vo2MaxUnit = HKUnit.literUnit(with: .milli).unitDivided(by: kgmin)
+		let vo2MaxQuantity = HKQuantity.init(unit: vo2MaxUnit, doubleValue: vo2Max)
+		let vo2MaxType = HKObjectType.quantityType(forIdentifier: .vo2Max)!
+		let vo2MaxSample = HKQuantitySample.init(type: vo2MaxType, quantity: vo2MaxQuantity, start: now, end: now)
+		
+		self.healthStore.save(vo2MaxSample, withCompletion: {_,_ in })
+
+	}
+
+	/// @brief Estimates the user's cycling FTP based on cycling power data in HealthKit. Uses 95% of the best recent 20 minute effort.
+	func estimateFtp() throws {
+		if #available(iOS 17.0, macOS 14.0, watchOS 10.0, *) {
+			let powerType = HKObjectType.quantityType(forIdentifier: .cyclingPower)!
+			self.powerSampleBuf.removeAll()
+
+			self.recentQuantitySamplesOfType(quantityType: powerType) { sample, error in
+				if let powerSample = sample {
+					let powerUnit: HKUnit = HKUnit.watt()
+					
+					// Add to the sample buffer.
+					self.powerSampleBuf.append(powerSample)
+					if self.powerSampleBuf.count > 1 {
+						
+						// Remove anything that falls outside of our 20 minute window.
+						var startTime = self.powerSampleBuf[0].startDate
+						let endTime = powerSample.endDate
+						while endTime.timeIntervalSince1970 - startTime.timeIntervalSince1970 > (20 * 60) && self.powerSampleBuf.count > 1{
+							self.powerSampleBuf.removeFirst()
+							startTime = self.powerSampleBuf[0].startDate
+						}
+						
+						// Make sure we didn't empty the buffer when purging old data.
+						// Also make sure we have something close to 20 mimutes of data.
+						if endTime.timeIntervalSince1970 - startTime.timeIntervalSince1970 > (19.5 * 60) && self.powerSampleBuf.count > 1 {
+							
+							// Compute the average.
+							var sum: Double = 0.0
+							for bufSample in self.powerSampleBuf {
+								sum += bufSample.quantity.doubleValue(for: powerUnit)
+							}
+							let avg = sum / Double(self.powerSampleBuf.count)
+							let estimate = avg * 0.95
+							
+							if self.estimatedFtp == nil || estimate > self.estimatedFtp! {
+								self.estimatedFtp = estimate
+								Preferences.setEstimatedFtp(value: estimate)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/// @brief Gets the user's cycling FTP from HealthKit  and updates the copy in our database.
+	func getFtp() throws {
+		if #available(iOS 17.0, macOS 14.0, watchOS 10.0, *) {
+			let powerType = HKObjectType.quantityType(forIdentifier: .cyclingFunctionalThresholdPower)!
+			
+			self.mostRecentQuantitySampleOfType(quantityType: powerType) { sample, error in
+				if let powerSample = sample {
+					let powerUnit: HKUnit = HKUnit.watt()
+					let ftp = powerSample.quantity.doubleValue(for: powerUnit)
+
+					Preferences.setUserDefinedFtp(value: ftp)
+				}
+			}
+		}
+	}
+
+	func setFtp(ftp: Double) {
+		if #available(iOS 17.0, macOS 14.0, watchOS 10.0, *) {
+			let now = Date()
+			let powerQuantity = HKQuantity.init(unit: HKUnit.watt(), doubleValue: ftp)
+			let powerType = HKQuantityType.init(HKQuantityTypeIdentifier.cyclingFunctionalThresholdPower)
+			let powerSample = HKQuantitySample.init(type: powerType, quantity: powerQuantity, start: now, end: now)
+
+			self.healthStore.save(powerSample, withCompletion: {_,_ in })
 		}
 	}
 
@@ -356,12 +534,17 @@ class HealthManager {
 	func readCyclingWorkoutsFromHealthStore() {
 		self.readWorkoutsFromHealthStoreOfType(activityType: HKWorkoutActivityType.cycling)
 	}
+	
+	func readSwimWorkoutsFromHealthStore() {
+		self.readWorkoutsFromHealthStoreOfType(activityType: HKWorkoutActivityType.swimming)
+	}
 
 	func readAllActivitiesFromHealthStore() {
 		self.clearWorkoutsList()
 		self.readRunningWorkoutsFromHealthStore()
 		self.readWalkingWorkoutsFromHealthStore()
 		self.readCyclingWorkoutsFromHealthStore()
+		self.readSwimWorkoutsFromHealthStore()
 		self.waitForHealthKitQueries()
 	}
 
@@ -371,8 +554,8 @@ class HealthManager {
 		for (index, distance2) in distances.enumerated() {
 			if index > 0 {
 				let distance1 = distances[index - 1]
-				
 				let speed = distance2 - distance1;
+
 				speeds.append(speed)
 			}
 		}
@@ -583,7 +766,20 @@ class HealthManager {
 		let hrQuantity = HKQuantity.init(unit: hrUnit, doubleValue: beats)
 		let hrType = HKQuantityType.init(HKQuantityTypeIdentifier.heartRate)
 		let hrSample = HKQuantitySample.init(type: hrType, quantity: hrQuantity, start: now, end: now)
-		self.healthStore.save(hrSample, withCompletion: {_,_ in })
+		self.healthStore.save(hrSample, withCompletion: { result, error in
+		})
+	}
+
+	func saveCyclingPowerIntoHealthStore(watts: Double) {
+		if #available(iOS 17.0, macOS 14.0, watchOS 10.0, *) {
+			let now = Date()
+			let powerUnit: HKUnit = HKUnit.watt()
+			let powerQuantity = HKQuantity.init(unit: powerUnit, doubleValue: watts)
+			let powerType = HKQuantityType.init(HKQuantityTypeIdentifier.cyclingPower)
+			let powerSample = HKQuantitySample.init(type: powerType, quantity: powerQuantity, start: now, end: now)
+			self.healthStore.save(powerSample, withCompletion: { result, error in
+			})
+		}
 	}
 
 	func saveRunningWorkoutIntoHealthStore(distance: Double, units: HKUnit, startDate: Date, endDate: Date, locations: Array<CLLocationCoordinate2D>) {
@@ -658,16 +854,7 @@ class HealthManager {
 		let workout = self.workouts[activityId]
 
 		if workout != nil {
-			switch workout!.workoutActivityType {
-			case HKWorkoutActivityType.cycling:
-				return ACTIVITY_TYPE_CYCLING
-			case HKWorkoutActivityType.running:
-				return ACTIVITY_TYPE_RUNNING
-			case HKWorkoutActivityType.walking:
-				return ACTIVITY_TYPE_WALKING
-			default:
-				break
-			}
+			return HealthManager.healthKitWorkoutToActivityType(workout: workout!)
 		}
 		return ""
 	}
@@ -808,21 +995,6 @@ class HealthManager {
 		return newFileName
 	}
 
-	/// @brief This method is called in response to a heart rate updated notification. It saves the heart rate to the health store.
-	@objc func heartRateUpdated(notification: NSNotification) {
-
-		if let notificationData = notification.object as? Dictionary<String, Any> {
-
-			if  let idStr = notificationData[KEY_NAME_PERIPHERAL_OBJ] as? String,
-				let rate = notificationData[KEY_NAME_HEART_RATE] as? Double {
-				
-				if Preferences.shouldUsePeripheral(uuid: idStr) {
-					self.saveHeartRateIntoHealthStore(beats: rate)
-				}
-			}
-		}
-	}
-
 	/// @brief This method is called in response to an activity stopped notification.
 	@objc func activityStopped(notification: NSNotification) {
 		
@@ -871,6 +1043,7 @@ class HealthManager {
 			if quantity != nil && date != nil {
 				let heartRateUnit: HKUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
 				let unixTime = date!.timeIntervalSince1970 // Apple Watch processor is 32-bit, so time_t is 32-bit as well
+
 				self.currentHeartRate = quantity!.doubleValue(for: heartRateUnit)
 				self.heartRateRead = true
 				ProcessHrmReading(self.currentHeartRate, UInt64(unixTime))
@@ -886,6 +1059,59 @@ class HealthManager {
 		self.healthStore.stop(self.hrQuery!)
 		self.hrQuery = nil
 	}
+
+	func startWorkout(activityType: String, startTime: Date) {
+		let workoutConfig: HKWorkoutConfiguration = HKWorkoutConfiguration()
+
+		// Convert the activity strings we use internally to Apple's activity type enumeration.
+		workoutConfig.activityType = HealthManager.activityTypeToHKWorkoutType(activityType: activityType)
+
+		// From the activity type, infer the type of location (indoor, outdoor).
+		workoutConfig.locationType = HealthManager.activityTypeToHKWorkoutSessionLocationType(activityType: activityType)
+
+		// Swim specifc configuration.
+		if workoutConfig.activityType == HKWorkoutActivityType.swimming {
+			workoutConfig.swimmingLocationType = HealthManager.activityTypeToHKWorkoutSwimmingLocationType(activityType: activityType)
+			if workoutConfig.locationType == HKWorkoutSessionLocationType.indoor {
+				workoutConfig.lapLength = HealthManager.poolLengthToHKQuantity()
+			}
+		}
+
+#if os(watchOS)
+		// Start the session in HealthKit. The app will get put into the background on the watch if we don't do this.
+		do {
+			self.workoutSession = try HKWorkoutSession(healthStore: self.healthStore, configuration:workoutConfig)
+			if let session = self.workoutSession {
+				//session.delegate = self
+				session.startActivity(with: startTime)
+			}
+		}
+		catch {
+		}
+
+		// Subscribe to heart rate updates.
+		if Preferences.useWatchHeartRate() {
+			self.subscribeToHeartRateUpdates()
+		}
+#endif
+	}
+
+	func stopWorkout(endTime: Date) {
+#if os(watchOS)
+		if let session = self.workoutSession {
+			session.stopActivity(with: endTime)
+			session.end()
+		}
+#endif
+	}
+
+#if os(watchOS)
+	func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {
+	}
+	
+	func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
+	}
+#endif
 
 	/// @brief Utility method for converting between the specified unit system and HKUnit.
 	static func unitSystemToHKDistanceUnit(units: UnitSystem) -> HKUnit {

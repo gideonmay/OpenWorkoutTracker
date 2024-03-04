@@ -29,6 +29,7 @@
 #define ACTIVITY_ATTRIBUTE_NORMALIZED_POWER           "Normalized Power"        // normalized power calculation
 #define ACTIVITY_ATTRIBUTE_MAX_POWER                  "Maximum Power"           // maximum power meter reading
 #define ACTIVITY_ATTRIBUTE_POWER_ZONE                 "Power Zone"              // current power zone
+#define ACTIVITY_ATTRIBUTE_POWER_TO_WEIGHT            "Power To Weight"         // current power to weight (watts/kg)
 #define ACTIVITY_ATTRIBUTE_NUM_WHEEL_REVOLUTIONS      "Num. Wheel Revolutions"  // the number of wheel revolutions (from the wheel speed sensor)
 #define ACTIVITY_ATTRIBUTE_WHEEL_SPEED                "Wheel Speed"             // wheel speed
 #define ACTIVITY_ATTRIBUTE_REPS                       "Repetitions"             // number of repetitions (either computed or from theuser)
@@ -43,6 +44,7 @@
 #define ACTIVITY_ATTRIBUTE_CURRENT_PACE               "Current Pace"            // current pace (instantaneous)
 #define ACTIVITY_ATTRIBUTE_FASTEST_PACE               "Fastest Pace"            // best pace
 #define ACTIVITY_ATTRIBUTE_GRADIENT                   "Gradient"                // current gradient
+#define ACTIVITY_ATTRIBUTE_AVG_GRADIENT               "Average Gradient"        // average gradient
 #define ACTIVITY_ATTRIBUTE_GRADE_ADJUSTED_PACE        "Grade Adjusted Pace"     // grade adjusted pace (pace accounting for changes in grade)
 #define ACTIVITY_ATTRIBUTE_GAP_TO_TARGET_PACE         "Gap to Target Pace"      // difference between the current pace and the target pace
 #define ACTIVITY_ATTRIBUTE_AVG_SPEED                  "Average Speed"           // average speed (using elapsed time)
@@ -68,9 +70,9 @@
 #define ACTIVITY_ATTRIBUTE_VERTICAL_ACCURACY          "Vertical Accuracy"       // vertical accuracy, in meters
 #define ACTIVITY_ATTRIBUTE_STARTING_LATITUDE          "Starting Latitude"       // initial latitude
 #define ACTIVITY_ATTRIBUTE_STARTING_LONGITUDE         "Starting Longitude"      // initial longitude
-#define ACTIVITY_ATTRIBUTE_X                          "X"                       // current acceleromter value
-#define ACTIVITY_ATTRIBUTE_Y                          "Y"                       // current acceleromter value
-#define ACTIVITY_ATTRIBUTE_Z                          "Z"                       // current acceleromter value
+#define ACTIVITY_ATTRIBUTE_X                          "x"                       // current acceleromter value
+#define ACTIVITY_ATTRIBUTE_Y                          "y"                       // current acceleromter value
+#define ACTIVITY_ATTRIBUTE_Z                          "z"                       // current acceleromter value
 #define ACTIVITY_ATTRIBUTE_FASTEST_CENTURY            "Fastest Century"         // best 100 miles
 #define ACTIVITY_ATTRIBUTE_FASTEST_METRIC_CENTURY     "Fastest Metric Century"  // best 100 K
 #define ACTIVITY_ATTRIBUTE_FASTEST_MARATHON           "Fastest Marathon"        // best 26.2 miles
@@ -106,5 +108,6 @@
 #define ACTIVITY_ATTRIBUTE_TOTAL_ASCENT               "Total Ascent"            // 
 #define ACTIVITY_ATTRIBUTE_SWIM_STROKES               "Swim Strokes"            // the number of swim strokes taken
 #define ACTIVITY_ATTRIBUTE_THREAT_COUNT               "Threat Count"            // threat count (as from a rear-facing radar unit)
+#define ACTIVITY_ATTRIBUTE_TOTAL_THREAT_COUNT         "Total Threat Count"      // sum of all threat counts (as from a rear-facing radar unit)
 
 #endif

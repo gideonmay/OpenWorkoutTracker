@@ -56,7 +56,7 @@ class HistoryVM : ObservableObject {
 					var startTime: time_t = 0
 					var endTime: time_t = 0
 					
-					if GetHistoricalActivityStartAndEndTime(activityIndex, &startTime, &endTime) {
+					if GetHistoricalActivityStartAndEndTimeByIndex(activityIndex, &startTime, &endTime) {
 						HealthManager.shared.removeActivitiesThatOverlapWithStartTime(startTime: startTime, endTime:endTime)
 					}
 				}
@@ -69,7 +69,6 @@ class HistoryVM : ObservableObject {
 				summary.id = workout.key
 				summary.name = ""
 				summary.type = HealthManager.healthKitWorkoutToActivityType(workout: workout.value)
-				summary.index = ACTIVITY_INDEX_UNKNOWN
 				summary.startTime = workout.value.startDate
 				summary.endTime = workout.value.endDate
 				summary.source = ActivitySummary.Source.healthkit
@@ -89,15 +88,7 @@ class HistoryVM : ObservableObject {
 		if LoadAllHistoricalActivitySummaryData() {
 			
 			// Whenever we reload the history we should re-evaluate the user's recent performances.
-			let estimatedFtp = EstimateFtp()
-			let estimatedMaxHr = EstimateMaxHr()
-			let best5KAttr = QueryBestActivityAttributeByActivityType(ACTIVITY_TYPE_RUNNING, ACTIVITY_ATTRIBUTE_FASTEST_5K, true, nil)
-			Preferences.setEstimatedFtp(value: estimatedFtp)
-			Preferences.setEstimatedMaxHr(value: estimatedMaxHr)
-			if best5KAttr.valid {
-				Preferences.setBestRecent5KSecs(value: UInt32(best5KAttr.value.intVal))
-			}
-			CommonApp.shared.setUserProfile()
+			ProfileVM.updateEstimations()
 			
 			// Minor performance optimization, since we know how many items will be in the list.
 			let numActivities = GetNumHistoricalActivities()
@@ -111,17 +102,17 @@ class HistoryVM : ObservableObject {
 				// Load all data.
 				var startTime: time_t = 0
 				var endTime: time_t = 0
-				if GetHistoricalActivityStartAndEndTime(activityIndex, &startTime, &endTime) {
-					
-					if endTime == 0 {
-						FixHistoricalActivityEndTime(activityIndex)
-					}
+				if GetHistoricalActivityStartAndEndTimeByIndex(activityIndex, &startTime, &endTime) {
 					
 					let activityIdPtr = UnsafeRawPointer(ConvertActivityIndexToActivityId(activityIndex)) // this one is a const char*, so don't dealloc it
 					
-					let activityTypePtr = UnsafeRawPointer(GetHistoricalActivityType(activityIndex))
-					let activityNamePtr = UnsafeRawPointer(GetHistoricalActivityName(activityIndex))
-					let activityDescPtr = UnsafeRawPointer(GetHistoricalActivityDescription(activityIndex))
+					let activityTypePtr = UnsafeRawPointer(GetHistoricalActivityType(activityIdPtr))
+					let activityNamePtr = UnsafeRawPointer(GetHistoricalActivityName(activityIdPtr))
+					let activityDescPtr = UnsafeRawPointer(GetHistoricalActivityDescription(activityIdPtr))
+					
+					if endTime == 0 {
+						FixHistoricalActivityEndTime(activityIdPtr)
+					}
 					
 					defer {
 						activityTypePtr!.deallocate()
@@ -144,7 +135,6 @@ class HistoryVM : ObservableObject {
 						summary.name = activityName
 						summary.type = activityType
 						summary.description = activityDesc
-						summary.index = activityIndex
 						summary.startTime = Date(timeIntervalSince1970: TimeInterval(startTime))
 						summary.endTime = Date(timeIntervalSince1970: TimeInterval(endTime))
 						summary.source = ActivitySummary.Source.database
@@ -174,7 +164,9 @@ class HistoryVM : ObservableObject {
 		self.loadActivitiesFromHealthKit()
 
 		if createAllObjects {
-			CreateAllHistoricalActivityObjects()
+			if CreateAllHistoricalActivityObjects() == false {
+				NSLog("Failed to create historical activity objects.")
+			}
 		}
 
 		DispatchQueue.main.async {
@@ -186,48 +178,48 @@ class HistoryVM : ObservableObject {
 	
 	func getFormattedTotalActivityAttribute(activityType: String, attributeName: String) -> String {
 		let attr = QueryActivityAttributeTotalByActivityType(attributeName, activityType)
-		return LiveActivityVM.formatActivityValue(attribute: attr)
+		return StringUtils.formatActivityValue(attribute: attr)
 	}
 	
 	func getFormattedBestActivityAttribute(activityType: String, attributeName: String, smallestIsBest: Bool) -> String {
 		let attr = QueryBestActivityAttributeByActivityType(attributeName, activityType, smallestIsBest, nil)
-		return LiveActivityVM.formatActivityValue(attribute: attr)
+		return StringUtils.formatActivityValue(attribute: attr)
 	}
 	
 	/// @brief Utility function for getting the image name that corresponds to an activity, such as running, cycling, etc.
 	static func imageNameForActivityType(activityType: String) -> String {
 		if activityType == ACTIVITY_TYPE_BENCH_PRESS {
-			return "scalemass"
+			return "figure.strengthtraining.traditional"
 		}
 		if activityType == ACTIVITY_TYPE_CHINUP {
-			return "scalemass"
+			return "figure.play"
 		}
 		if activityType == ACTIVITY_TYPE_CYCLING {
-			return "bicycle"
+			return "figure.outdoor.cycle"
 		}
 		if activityType == ACTIVITY_TYPE_HIKING {
-			return "figure.walk"
+			return "figure.hiking"
 		}
 		if activityType == ACTIVITY_TYPE_MOUNTAIN_BIKING {
-			return "bicycle"
+			return "figure.outdoor.cycle"
 		}
 		if activityType == ACTIVITY_TYPE_RUNNING {
-			return "figure.walk"
+			return "figure.run"
 		}
 		if activityType == ACTIVITY_TYPE_SQUAT {
-			return "scalemass"
+			return "figure.strengthtraining.traditional"
 		}
 		if activityType == ACTIVITY_TYPE_STATIONARY_CYCLING {
-			return "bicycle"
+			return "figure.indoor.cycle"
 		}
 		if activityType == ACTIVITY_TYPE_VIRTUAL_CYCLING {
-			return "bicycle"
+			return "figure.indoor.cycle"
 		}
 		if activityType == ACTIVITY_TYPE_TREADMILL {
 			return "figure.walk"
 		}
 		if activityType == ACTIVITY_TYPE_PULLUP {
-			return "scalemass"
+			return "figure.play"
 		}
 		if activityType == ACTIVITY_TYPE_PUSHUP {
 			return "scalemass"

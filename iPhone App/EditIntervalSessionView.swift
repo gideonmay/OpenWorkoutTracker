@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct EditIntervalSessionView: View {
+	@Environment(\.colorScheme) var colorScheme
 	@Environment(\.dismiss) var dismiss
 	@StateObject private var intervalSessionsVM = IntervalSessionsVM.shared
 
@@ -23,7 +24,7 @@ struct EditIntervalSessionView: View {
 	@State private var showingIntervalRepsValueSelection: Bool = false
 	@State private var showingSegmentEditSelection: Bool = false
 	@State private var showingDeleteConfirmation: Bool = false
-	@State private var showingSportSelection: Bool = false
+	@State private var showingActivityTypeSelection: Bool = false
 	@State private var showingSaveFailedAlert: Bool = false
 	@State private var showingDeleteFailedAlert: Bool = false
 	@State private var showingValueEditAlert: Bool = false
@@ -43,20 +44,26 @@ struct EditIntervalSessionView: View {
 
 			Group() {
 				Text("Name")
+					.font(.system(size: 24))
 					.bold()
 				TextField("Name", text: self.$tempName)
 					.onChange(of: self.tempName) { value in
 						self.tempSession.name = value
 					}
 			}
-			.padding(5)
+			.padding(SIDE_INSETS)
 
 			Group() {
+				Text("Activity Type")
+					.font(.system(size: 24))
+					.bold()
 				Button(self.tempSession.sport) {
-					self.showingSportSelection = true
+					self.showingActivityTypeSelection = true
 				}
+				.padding(TOP_INSETS)
+				.font(.system(size: 18))
 				.bold()
-				.confirmationDialog("Select the workout to perform", isPresented: self.$showingSportSelection, titleVisibility: .visible) {
+				.confirmationDialog("Select the workout to perform", isPresented: self.$showingActivityTypeSelection, titleVisibility: .visible) {
 					ForEach(CommonApp.activityTypes, id: \.self) { item in
 						Button(item) {
 							self.tempSession.sport = item
@@ -64,10 +71,11 @@ struct EditIntervalSessionView: View {
 					}
 				}
 			}
-			.padding(5)
+			.padding(SIDE_INSETS)
 
 			Group() {
 				Text("Description")
+					.font(.system(size: 24))
 					.bold()
 				TextField("Description", text: self.$tempDescription, axis: .vertical)
 					.lineLimit(2...10)
@@ -75,7 +83,7 @@ struct EditIntervalSessionView: View {
 						self.tempSession.description = value
 					}
 			}
-			.padding(5)
+			.padding(SIDE_INSETS)
 
 			Spacer()
 
@@ -158,13 +166,20 @@ struct EditIntervalSessionView: View {
 			Spacer()
 
 			Group() {
-				Button(action: { self.showingIntervalTypeSelection = true }) {
-					Text("Append")
-						.frame(minWidth: 0, maxWidth: .infinity)
-						.foregroundColor(.white)
-						.padding()
+				Button(action: {
+					self.showingIntervalTypeSelection = true
+				}) {
+					HStack() {
+						Image(systemName: "doc.append")
+						Text("Append")
+					}
+					.frame(minWidth: 0, maxWidth: .infinity)
+					.foregroundColor(self.colorScheme == .dark ? .black : .white)
+					.padding()
 				}
 				.background(RoundedRectangle(cornerRadius: 10, style: .continuous))
+				.opacity(0.8)
+				.bold()
 				.confirmationDialog("Which type of interval?", isPresented: self.$showingIntervalTypeSelection, titleVisibility: .visible) {
 					Button("Time") {
 						let newSegment = IntervalSegment()
@@ -211,7 +226,7 @@ struct EditIntervalSessionView: View {
 				}) {
 					Text("Save")
 						.frame(minWidth: 0, maxWidth: .infinity)
-						.foregroundColor(.white)
+						.foregroundColor(self.colorScheme == .dark ? .black : .white)
 						.padding()
 				}
 				.alert("Failed to create the interval session.", isPresented: self.$showingSaveFailedAlert) {}
@@ -222,11 +237,16 @@ struct EditIntervalSessionView: View {
 
 			// Delete
 			Group() {
-				Button(action: { self.showingDeleteConfirmation = true }) {
-					Text("Delete")
-						.frame(minWidth: 0, maxWidth: .infinity)
-						.foregroundColor(.red)
-						.padding()
+				Button(action: {
+					self.showingDeleteConfirmation = true
+				}) {
+					HStack() {
+						Image(systemName: "trash")
+						Text("Delete")
+					}
+					.frame(minWidth: 0, maxWidth: .infinity)
+					.foregroundColor(.red)
+					.padding()
 				}
 				.alert("Are you sure you want to delete this workout? This cannot be undone.", isPresented: self.$showingDeleteConfirmation) {
 					Button("Delete") {

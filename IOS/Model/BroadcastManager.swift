@@ -4,19 +4,25 @@
 //
 
 import Foundation
+#if os(iOS)
+import UIKit
+#elseif os(watchOS)
+import WatchKit
+#endif
 
 class BroadcastManager {
 	static let shared = BroadcastManager()
 	
-	var locationCache: Array<String> = []      // Locations to be sent
-	var accelerometerCache: Array<String> = [] // Accelerometer readings to be sent
-	var lastCacheFlushTime: UInt64 = 0         // Unix time of the most recent cache flush
-	var lastSendTime: UInt64 = 0               // Unix time of the most recent transmission
-	var deviceId: String? = Preferences.uuid() // Unique identifier for the device doing the sending
-	var dataBeingSent: String = ""             // Formatted data to be sent
-	var errorSending: Bool = false             // Whether or not the last send was successful
-	var currentActivityId: String = ""         // Cached for performance reasons
-	var currentActivityType: String = ""       // Cached for performance reasons
+	var locationCache: Array<String> = []       // Locations to be sent
+	var accelerometerCache: Array<String> = []  // Accelerometer readings to be sent
+	var lastCacheFlushTime: UInt64 = 0          // Unix time of the most recent cache flush
+	var lastSendTime: UInt64 = 0                // Unix time of the most recent transmission
+	var deviceId: String? = Preferences.uuid()  // Unique identifier for the device doing the sending
+	var dataBeingSent: String = ""              // Formatted data to be sent
+	var errorSending: Bool = false              // Whether or not the last send was successful
+	var currentActivityId: String = ""          // Cached for performance reasons
+	var currentActivityType: String = ""        // Cached for performance reasons
+	let rate: Int = Preferences.broadcastRate() // Rate at which we should broadcast, in seconds
 
 	/// Singleton constructor
 	private init() {
@@ -131,6 +137,13 @@ class BroadcastManager {
 		// Add the activity type to the JSON string.
 		post += String(format: ",\n\"%@\":\"%@\"", KEY_NAME_ACTIVITY_TYPE, self.currentActivityType)
 		
+		// Add the battery level to the JSON string.
+#if os(iOS)
+		post += String(format: ",\n\"%@\":\"%.1f\"", KEY_NAME_BATTERY_LEVEL, UIDevice.current.batteryLevel)
+#elseif os(watchOS)
+		post += String(format: ",\n\"%@\":\"%.1f\"", KEY_NAME_BATTERY_LEVEL, WKInterfaceDevice.current().batteryLevel)
+#endif
+		
 		// Add the user name to the JSON string.
 		let userName = Preferences.broadcastUserName()
 		if userName.count > 0 {
@@ -146,11 +159,15 @@ class BroadcastManager {
 	}
 	
 	func broadcast() {
-		// Flush at the user-specified interval. Default to 60 seconds if one was not specified.
-		let rate = Preferences.broadcastRate()
-		
+		// Flush at the user-specified interval. Defaults to 60 seconds if one was not specified.
+		// If we're in low power mode then slow down.
+		var broadcastRate = self.rate
+		if ProcessInfo.processInfo.isLowPowerModeEnabled {
+			broadcastRate = self.rate * 2
+		}
+
 		// If we have data to send and it's been long enough since we last sent then flush the cache.
-		if ((self.locationCache.count > 0 || self.accelerometerCache.count > 0) && (UInt64(time(nil)) - self.lastCacheFlushTime > rate)) {
+		if ((self.locationCache.count > 0 || self.accelerometerCache.count > 0) && (UInt64(time(nil)) - self.lastCacheFlushTime > broadcastRate)) {
 			self.flushGlobalBroadcastCacheRest(isStopped: false)
 		}
 	}

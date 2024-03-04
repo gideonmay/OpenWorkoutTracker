@@ -27,9 +27,6 @@
 
 #include <stdbool.h>
 
-#define ACTIVITY_INDEX_UNKNOWN (size_t)-1
-#define WORKOUT_INDEX_UNKNOWN (size_t)-1
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -60,7 +57,6 @@ extern "C" {
 
 	// Functions for managing the activity hash.
 	bool CreateOrUpdateActivityHash(const char* const activityId, const char* const hash);
-	char* GetActivityIdByHash(const char* const hash);
 	char* GetHashForActivityId(const char* const activityId);
 
 	// Methods for managing the activity sync status.
@@ -72,7 +68,7 @@ extern "C" {
 	// Functions for controlling user preferences and profile data.
 	void SetPreferredUnitSystem(UnitSystem system);
 	void SetUserProfile(ActivityLevel level, Gender gender, time_t bday, double weightKg, double heightCm,
-		double ftp, double restingHr, double maxHr, double vo2Max, uint32_t bestRecent5KSecs);
+		double ftp, double restingHr, double maxHr, double vo2Max, uint32_t bestRecentRunPerfSecs, double bestRecentRunPerfMeters);
 	bool GetUsersWeightHistory(WeightCallback callback, void* context);
 	bool GetUsersCurrentWeight(time_t* timestamp, double* weightKg);
 
@@ -128,7 +124,7 @@ extern "C" {
 
 	// Functions for managing pace plans.
 	bool InitializePacePlanList(void);
-	bool CreateNewPacePlan(const char* const planName, const char* const planId);
+	bool CreateNewPacePlan(const char* const planId, const char* const name);
 	char* RetrievePacePlanAsJSON(size_t planIndex);
 	bool UpdatePacePlan(const char* const planId, const char* const name, const char* const description,
 		double targetDistance, time_t targetTime, time_t targetSplits,
@@ -149,50 +145,49 @@ extern "C" {
 	void InitializeHistoricalActivityList(void);
 	void LoadHistoricalActivity(const char* const activityId);
 	bool HistoricalActivityListIsInitialized(void);
-	bool CreateHistoricalActivityObject(size_t activityIndex);
+	bool CreateHistoricalActivityObject(const char* const activityId);
 	bool CreateAllHistoricalActivityObjects(void);
-	bool LoadHistoricalActivityLapData(size_t activityIndex);
-	bool LoadAllHistoricalActivitySensorData(size_t activityIndex);
+	bool LoadHistoricalActivityLapData(const char* const activityId);
+	bool LoadAllHistoricalActivitySensorData(const char* const activityId);
 	bool LoadAllHistoricalActivitySummaryData(void);
-	bool LoadHistoricalActivitySummaryData(size_t activityIndex);
-	bool SaveHistoricalActivitySummaryData(size_t activityIndex);
+	bool LoadHistoricalActivitySummaryData(const char* const activityId);
+	bool SaveHistoricalActivitySummaryData(const char* const activityId);
 
 	// Functions for unloading history.
 	void FreeHistoricalActivityList(void);
-	void FreeHistoricalActivityObject(size_t activityIndex);
-	void FreeHistoricalActivitySensorData(size_t activityIndex);
-	void FreeHistoricalActivitySummaryData(size_t activityIndex);
+	void FreeHistoricalActivityObject(const char* const activityId);
+	void FreeHistoricalActivitySensorData(const char* const activityId);
+	void FreeHistoricalActivitySummaryData(const char* const activityId);
 
-	// Functions for accessing historical data (accessed by index instead of ID, following a call to InitializeHistoricalActivityList.
-	bool GetHistoricalActivityStartAndEndTime(size_t activityIndex, time_t* const startTime, time_t* const endTime);
-	void FixHistoricalActivityEndTime(size_t activityIndex);
-	char* GetHistoricalActivityType(size_t activityIndex);
-	char* GetHistoricalActivityName(size_t activityIndex);
-	char* GetHistoricalActivityDescription(size_t activityIndex);
-	char* GetHistoricalActivityAttributeName(size_t activityIndex, size_t attributeNameIndex);
-	ActivityAttributeType QueryHistoricalActivityAttribute(size_t activityIndex, const char* const attributeName);
-	size_t GetNumHistoricalActivityAccelerometerReadings(size_t activityIndex);
-	size_t GetNumHistoricalActivityAttributes(size_t activityIndex);
+	// Functions for accessing historical data.
+	// These all assume the activity has already been loaded.
+	bool GetHistoricalActivityStartAndEndTimeByIndex(size_t activityIndex, time_t* const startTime, time_t* const endTime);
+	bool GetHistoricalActivityStartAndEndTime(const char* const activityId, time_t* const startTime, time_t* const endTime);
+	void FixHistoricalActivityEndTime(const char* const activityId);
+	char* GetHistoricalActivityType(const char* const activityId);
+	char* GetHistoricalActivityName(const char* const activityId);
+	char* GetHistoricalActivityDescription(const char* const activityId);
+	char* GetHistoricalActivityAttributeName(const char* const activityId, size_t attributeNameIndex);
+	ActivityAttributeType QueryHistoricalActivityAttribute(const char* const activityId, const char* const attributeName);
+	size_t GetNumHistoricalActivityAccelerometerReadings(const char* const activityId);
+	size_t GetNumHistoricalActivityAttributes(const char* const activityId);
 	size_t GetNumHistoricalActivities(void);
 	size_t GetNumHistoricalActivitiesByType(const char* const activityType);
-	void SetHistoricalActivityAttribute(size_t activityIndex, const char* const attributeName, ActivityAttributeType attributeValue);
-	bool IsHistoricalActivityFootBased(size_t activityIndex);
-	bool IsHistoricalActivityMovingActivity(size_t activityIndex);
-	bool IsHistoricalActivityLiftingActivity(size_t activityIndex);
+	void SetHistoricalActivityAttribute(const char* const activityId, const char* const attributeName, ActivityAttributeType attributeValue);
+	bool IsHistoricalActivityFootBased(const char* const activityId);
+	bool IsHistoricalActivityMovingActivity(const char* const activityId);
+	bool IsHistoricalActivityLiftingActivity(const char* const activityId);
 
 	// Functions for accessing historical location data.
-	size_t GetNumHistoricalActivityLocationPoints(size_t activityIndex);
-	bool GetHistoricalActivityLocationPoint(size_t activityIndex, size_t pointIndex, Coordinate* const coordinate);
+	size_t GetNumHistoricalActivityLocationPoints(const char* const activityId);
+	bool GetHistoricalActivityLocationPoint(const char* const activityId, size_t pointIndex, Coordinate* const coordinate);
 
 	// Functions for accessing historical sensor data.
-	size_t GetNumHistoricalSensorReadings(size_t activityIndex, SensorType sensorType);
-	bool GetHistoricalActivitySensorReading(size_t activityIndex, SensorType sensorType, size_t readingIndex,
+	size_t GetNumHistoricalSensorReadings(const char* const activityId, SensorType sensorType);
+	bool GetHistoricalActivitySensorReading(const char* const activityId, SensorType sensorType, size_t readingIndex,
 		time_t* const readingTime, double* const readingValue);
-	bool GetHistoricalActivityAccelerometerReading(size_t activityIndex, size_t readingIndex,
+	bool GetHistoricalActivityAccelerometerReading(const char* const activityId, size_t readingIndex,
 		time_t* const readingTime, double* const xValue, double* const yValue, double* const zValue);
-
-	// Functions for listing locations from the current activity.
-	bool GetCurrentActivityPoint(size_t pointIndex, Coordinate* const coordinate);
 
 	// Functions for modifying historical activity.
 	bool TrimActivityData(const char* const activityId, uint64_t newTime, bool fromStart);
@@ -249,8 +244,12 @@ extern "C" {
 	bool StartActivityWithTimestamp(const char* const activityId, time_t startTime);
 	bool StopCurrentActivity(void);
 	bool PauseCurrentActivity(void);
-	bool StartNewLap(void);
 	bool SaveActivitySummaryData(void);
+
+	// Lap-related functions for the current activity.
+	bool StartNewLap(void);
+	bool MetaDataForLap(size_t lapNum, uint64_t* startTimeMs, uint64_t* elapsedTimeMs, double* startingDistanceMeters, double* startingCalorieCount);
+	size_t NumLaps(void);
 
 	// Functions for managing the autostart state.
 	bool IsAutoStartEnabled(void);
@@ -297,11 +296,15 @@ extern "C" {
 	ActivityAttributeType QueryActivityAttributeTotalByActivityType(const char* const attributeName, const char* const activityType);
 	ActivityAttributeType QueryBestActivityAttributeByActivityType(const char* const attributeName, const char* const activityType, bool smallestIsBest, char** const pActivityId);
 
-	// Functions for importing ZWO files.
+	// Functions for importing ZWO workout files.
 	bool ImportZwoFile(const char* const fileName, const char* const workoutId);
 
-	// Functions for importing KML files.
-	bool ImportKmlFile(const char* const fileName, KmlPlacemarkStartCallback placemarkStartCallback, KmlPlacemarkEndCallback placemarkEndCallback, CoordinateCallback coordinateCallback, void* context);
+	// Functions for managing routes.
+	bool InitializeRouteList(void);
+	bool ImportRouteFromFile(const char* const routeId, const char* const fileName);
+	char* RetrieveRouteInfoAsJSON(size_t routeIndex);
+	bool RetrieveRouteCoordinate(size_t routeIndex, size_t coordinateIndex, Coordinate* const coordinate);
+	bool DeleteRoute(const char* const routeId);
 
 	// Functions for creating a heat map.
 	bool CreateHeatMap(HeatMapPointCallback callback, void* context);

@@ -128,7 +128,6 @@ class PacePlansVM : ObservableObject {
 			while !done {
 				if let rawPacePlanDescPtr = RetrievePacePlanAsJSON(pacePlanIndex) {
 					let pacePlanDescPtr = UnsafeRawPointer(rawPacePlanDescPtr)
-
 					let pacePlanDesc = String(cString: pacePlanDescPtr.assumingMemoryBound(to: CChar.self))
 					let summaryDict = try! JSONSerialization.jsonObject(with: Data(pacePlanDesc.utf8), options: []) as! [String:AnyObject]
 					let summaryObj = self.dictToObj(summaryDict: summaryDict)
@@ -152,7 +151,7 @@ class PacePlansVM : ObservableObject {
 	}
 	
 	func createPacePlan(plan: PacePlan) -> Bool {
-		if CreateNewPacePlan(plan.name, plan.id.uuidString) {
+		if CreateNewPacePlan(plan.id.uuidString, plan.name) {
 			let lastUpdatedTime = time(nil)
 
 			if UpdatePacePlan(plan.id.uuidString, plan.name, plan.description, plan.distance, plan.time, plan.splits, plan.distanceUnits, plan.splitsUnits, lastUpdatedTime) {
@@ -192,7 +191,7 @@ class PacePlansVM : ObservableObject {
 			}
 		}
 		else {
-			if CreateNewPacePlan(summaryObj.name, summaryObj.id.uuidString) {
+			if CreateNewPacePlan(summaryObj.id.uuidString, summaryObj.name) {
 				if UpdatePacePlan(summaryObj.id.uuidString, summaryObj.name, summaryObj.description, summaryObj.distance, summaryObj.time, summaryObj.splits, summaryObj.distanceUnits, summaryObj.splitsUnits, time_t(summaryObj.lastUpdatedTime.timeIntervalSince1970)) {
 					return buildPacePlansList()
 				}

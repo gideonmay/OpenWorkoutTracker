@@ -17,7 +17,8 @@ final class FitTests: XCTestCase {
 
     func testFitExport() throws {
 		// Downloads files from the test files repository and imports them into a temporary database.
-		
+
+		var queryGroup: DispatchGroup = DispatchGroup() // tracks queries until they are completed
 		let downloader = Downloader()
 		
 		// Test files are stored here.
@@ -32,6 +33,8 @@ final class FitTests: XCTestCase {
 		var testFileNames: Array<String> = []
 		testFileNames.append("20210119_run_garmin_fenix6_sapphire.tcx")
 		
+		queryGroup.enter()
+
 		for testFileName in testFileNames {
 			let sourceFileName = sourcePath.appending(testFileName)
 			let sourceFileUrl = URL(string: sourceFileName)
@@ -39,6 +42,9 @@ final class FitTests: XCTestCase {
 			
 			downloader.download(source: sourceFileUrl!, destination: destFileUrl, completion: { error in
 				
+				// Make sure the download succeeded.
+				XCTAssert(error == nil)
+
 				// Make up an activity ID.
 				let activityId = UUID()
 				
@@ -47,10 +53,9 @@ final class FitTests: XCTestCase {
 				
 				// Refresh the database metadata.
 				InitializeHistoricalActivityList()
-				let activityIndex = ConvertActivityIdToActivityIndex(activityId.uuidString)
-				XCTAssert(CreateHistoricalActivityObject(activityIndex))
+				XCTAssert(CreateHistoricalActivityObject(activityId.uuidString))
 				XCTAssert((ExportActivityFromDatabase(activityId.uuidString, FILE_FIT, tempUrl.absoluteString) != nil))
-				XCTAssert(LoadAllHistoricalActivitySensorData(activityIndex))
+				XCTAssert(LoadAllHistoricalActivitySensorData(activityId.uuidString))
 				
 				// Clean up.
 				XCTAssert(DeleteActivityFromDatabase(activityId.uuidString))
@@ -60,6 +65,18 @@ final class FitTests: XCTestCase {
 				catch {
 				}
 			})
+
+			queryGroup.leave()
+		}
+
+		queryGroup.wait()
+
+		// Clean up.
+		do {
+			CloseDatabase()
+			try FileManager.default.removeItem(at: dbFileUrl)
+		}
+		catch {
 		}
 	}
 }

@@ -131,7 +131,7 @@ class SensorMgr : ObservableObject {
 		var elapsedSecs: Double = 0.0
 
 		// Sensor has reset
-		if currentCrankCount == 0 {
+		if currentCrankCount == 0 || currentCrankTime == 0 {
 			self.firstCadenceUpdate = true
 		}
 	
@@ -147,9 +147,18 @@ class SensorMgr : ObservableObject {
 		if self.firstCadenceUpdate {
 			self.currentCadenceRpm = 0
 		}
-		else if elapsedSecs > 0.0 {
-			let newCrankCount = currentCrankCount - self.lastCrankCount
+		else if elapsedSecs > 0.1 {
+			var newCrankCount: UInt16 = 0
+
+			// Check for rollover.
+			if currentCrankCount >= self.lastCrankCount {
+				newCrankCount = currentCrankCount - self.lastCrankCount
+			}
+			else {
+				newCrankCount = currentCrankCount
+			}
 			self.currentCadenceRpm = UInt16((Double(newCrankCount) / elapsedSecs) * 60.0)
+			self.lastCadenceUpdateTimeMs = curTimeMs
 		}
 		
 		// Handle cases where it has been a while since our last update (i.e. the crank is either not
@@ -158,7 +167,6 @@ class SensorMgr : ObservableObject {
 			self.currentCadenceRpm = 0
 		}
 		
-		self.lastCadenceUpdateTimeMs = curTimeMs
 		self.firstCadenceUpdate = false
 		self.lastCrankCount = currentCrankCount
 		self.lastCrankCountTime = currentCrankTime
@@ -168,22 +176,32 @@ class SensorMgr : ObservableObject {
 	func valueUpdated(peripheral: CBPeripheral, serviceId: CBUUID, value: Data) {
 		if Preferences.shouldUsePeripheral(uuid: peripheral.identifier.uuidString) {
 			let now = UInt64(Date().timeIntervalSince1970)
+			let hrTimeDiff = now - self.lastHrmUpdate
+			let powerTimeDiff = now - self.lastPowerUpdate
+			let radarTimeDiff = now - self.lastRadarUpdate
 
 			do {
 				if serviceId == HEART_RATE_SERVICE_ID {
-					if now - self.lastHrmUpdate >= 1 {
-						self.currentHeartRateBpm = decodeHeartRateReading(data: value)
-						self.lastHrmUpdate = now
-						ProcessHrmReading(Double(self.currentHeartRateBpm), self.lastHrmUpdate)
+					if hrTimeDiff >= 1 {
+						let currentReading = decodeHeartRateReading(data: value)
+						self.heartRateConnected = true
+
+						// Filthy hack to deal with some heart rate monitors that don't comply with the spec
+						if currentReading > 10 {
+							self.lastHrmUpdate = now
+							self.currentHeartRateBpm = currentReading
+							ProcessHrmReading(Double(self.currentHeartRateBpm), self.lastHrmUpdate)
+						}
 					}
 				}
 				else if serviceId == POWER_SERVICE_ID {
-					if now - self.lastPowerUpdate >= 1 {
+					if powerTimeDiff >= 1 {
 						let powerDict = try decodeCyclingPowerReadingAsDict(data: value)
 
 						if  let currentPower = powerDict[KEY_NAME_CYCLING_POWER_WATTS] {
 							self.currentPowerWatts = UInt16(currentPower)
 							self.lastPowerUpdate = now
+							self.powerConnected = true
 							ProcessPowerMeterReading(Double(self.currentPowerWatts), self.lastPowerUpdate)
 						}
 						
@@ -212,11 +230,23 @@ class SensorMgr : ObservableObject {
 					self.lastRunningPowerUpdate = now
 				}
 				else if serviceId == RADAR_SERVICE_ID {
-					if now - self.lastRadarUpdate >= 1 {
+					if radarTimeDiff >= 1 {
 						self.radarMeasurements = decodeCyclingRadarReading(data: value)
 						self.lastRadarUpdate = now
+						self.radarConnected = true
 						ProcessRadarReading(UInt(self.radarMeasurements.count), self.lastRadarUpdate)
 					}
+				}
+				
+				// Look for lost sensors, perhaps ones that didn't disconnect properly.
+				if hrTimeDiff > 30 {
+					self.heartRateConnected = false
+				}
+				if powerTimeDiff > 30 {
+					self.powerConnected = false
+				}
+				if radarTimeDiff > 30 {
+					self.radarConnected = false
 				}
 			}
 			catch {
@@ -281,9 +311,9 @@ class SensorMgr : ObservableObject {
 										CADENCE_SERVICE_ID,
 										RUNNING_POWER_SERVICE_ID,
 										RADAR_SERVICE_ID ]
-			
+
 			self.scanner.startScanningForServices(serviceIdsToScanFor: interestingServices,
-												  peripheralCallbacks: [peripheralDiscovered],
+												  peripheralDiscoveredCallbacks: [peripheralDiscovered],
 												  serviceCallbacks: [serviceDiscovered],
 												  valueUpdatedCallbacks: [valueUpdated],
 												  peripheralDisconnectedCallbacks: [peripheralDisconnected])

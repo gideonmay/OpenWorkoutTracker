@@ -31,6 +31,8 @@ func sensorTypeCallback(type: SensorType, context: Optional<UnsafeMutableRawPoin
 }
 
 class LiveActivityVM : ObservableObject {
+	static var shared: LiveActivityVM? = nil
+
 	@Published var currentMessage: String = ""
 	
 	@Published var title1: String = ""
@@ -81,15 +83,16 @@ class LiveActivityVM : ObservableObject {
 	private var prevCoordinate: Coordinate = Coordinate(latitude: 0.0, longitude: 0.0, altitude: 0.0, horizontalAccuracy: 0.0, verticalAccuracy: 0.0, time: 0)
 	private var activityAttributePrefs: Array<String> = []
 	private var timer: Timer?
-	private var activityId: String = ""
+	public var activityId: String = ""
 	private var activityType: String = ""
 	private var audioPlayer: AVAudioPlayer?
 	private var currentMessageTime: time_t = 0 // timestamp of when the current message was set, allows us to know when to clear it
 	
 	init(activityType: String, recreateOrphanedActivities: Bool) {
 		self.create(activityType: activityType, recreateOrphanedActivities: recreateOrphanedActivities)
+		LiveActivityVM.shared = self
 	}
-	
+
 	func create(activityType: String, recreateOrphanedActivities: Bool) {
 
 		NotificationCenter.default.addObserver(self, selector: #selector(self.messageReceived), name: Notification.Name(rawValue: NOTIFICATION_NAME_PRINT_MESSAGE), object: nil)
@@ -105,7 +108,7 @@ class LiveActivityVM : ObservableObject {
 		if IsActivityOrphaned(&orphanedActivityIndex) || IsActivityInProgress() {
 
 			let orphanedActivityIdPtr = UnsafeRawPointer(ConvertActivityIndexToActivityId(orphanedActivityIndex)) // const char*, no need to dealloc
-			let orphanedActivityTypePtr = UnsafeRawPointer(GetHistoricalActivityType(orphanedActivityIndex))
+			let orphanedActivityTypePtr = UnsafeRawPointer(GetHistoricalActivityType(orphanedActivityIdPtr))
 			var activityRecreated = false
 
 			defer {
@@ -127,7 +130,7 @@ class LiveActivityVM : ObservableObject {
 			}
 
 			if activityRecreated == false {
-				self.loadHistoricalActivityByIndex(activityIndex: orphanedActivityIndex)
+				self.loadHistoricalActivity(activityIndex: orphanedActivityIndex)
 			}
 		}
 
@@ -158,6 +161,7 @@ class LiveActivityVM : ObservableObject {
 
 		// This won't change. Cache it.
 		self.isMovingActivity = IsMovingActivity()
+		let isCyclingActivity = IsCyclingActivity()
 
 		// Have we played the start beep yet?
 		var playedStartBeep = false
@@ -283,11 +287,27 @@ class LiveActivityVM : ObservableObject {
 				if distance > 10 {
 					self.locationTrack.append(CLLocationCoordinate2D(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude))
 					self.trackLine = MKPolyline(coordinates: self.locationTrack, count: self.locationTrack.count)
+					self.trackLine.title = "Track"
 					self.prevCoordinate = currentCoordinate
 				}
 			}
 #endif
 			
+			// Add heart rate and power into the health store.
+			// Adding heart rate would be redundant on the Apple Watch.
+#if !os(watchOS)
+			let hrAttr = QueryLiveActivityAttribute(ACTIVITY_ATTRIBUTE_HEART_RATE)
+			if hrAttr.valid {
+				HealthManager.shared.saveHeartRateIntoHealthStore(beats: hrAttr.value.doubleVal)
+			}
+#endif
+			if isCyclingActivity {
+				let powerAttr = QueryLiveActivityAttribute(ACTIVITY_ATTRIBUTE_POWER)
+				if powerAttr.valid {
+					HealthManager.shared.saveCyclingPowerIntoHealthStore(watts: powerAttr.value.doubleVal)
+				}
+			}
+
 			// Update the displayed attributes.
 			for (index, activityAttribute) in self.activityAttributePrefs.enumerated() {
 				var attr = QueryLiveActivityAttribute(activityAttribute)
@@ -309,8 +329,9 @@ class LiveActivityVM : ObservableObject {
 #endif
 					}
 					else if activityAttribute == ACTIVITY_ATTRIBUTE_POWER {
+						let watts = SensorMgr.shared.currentPowerWatts
 						attr = InitializeActivityAttribute(TYPE_INTEGER, MEASURE_POWER, UNIT_SYSTEM_METRIC)
-						attr.value.intVal = UInt64(SensorMgr.shared.currentPowerWatts)
+						attr.value.intVal = UInt64(watts)
 						attr.valid = SensorMgr.shared.powerConnected
 					}
 					else if activityAttribute == ACTIVITY_ATTRIBUTE_CADENCE {
@@ -320,8 +341,8 @@ class LiveActivityVM : ObservableObject {
 					}
 				}
 				
-				let valueStr = LiveActivityVM.formatActivityValue(attribute: attr)
-				var measureStr = LiveActivityVM.formatActivityMeasureType(measureType: attr.measureType)
+				let valueStr = StringUtils.formatActivityValue(attribute: attr)
+				var measureStr = StringUtils.formatActivityMeasureType(measureType: attr.measureType)
 				
 				// To keep the spacing even if the unit string is empty then add something so the spacing stays even on the UI
 				if measureStr.count == 0 {
@@ -381,30 +402,34 @@ class LiveActivityVM : ObservableObject {
 		}
 	}
 	
-	func loadHistoricalActivityByIndex(activityIndex: size_t) {
+	func loadHistoricalActivity(activityIndex: size_t) {
 		// Delete any cached data.
-		FreeHistoricalActivityObject(activityIndex)
-		FreeHistoricalActivitySensorData(activityIndex)
+		FreeHistoricalActivityObject(self.activityId)
+		FreeHistoricalActivitySensorData(self.activityId)
 		
 		// Create the object.
-		CreateHistoricalActivityObject(activityIndex)
+		CreateHistoricalActivityObject(self.activityId)
 		
 		// Load all data.
-		LoadHistoricalActivitySummaryData(activityIndex)
-		if LoadAllHistoricalActivitySensorData(activityIndex) {
+		LoadHistoricalActivitySummaryData(self.activityId)
+		if LoadAllHistoricalActivitySensorData(self.activityId) {
 			var startTime: time_t = 0
 			var endTime: time_t = 0
 			
-			GetHistoricalActivityStartAndEndTime(activityIndex, &startTime, &endTime)
+			GetHistoricalActivityStartAndEndTime(self.activityId, &startTime, &endTime)
 			
 			// If the activity was orphaned then the end time will be zero.
 			if endTime == 0 {
-				FixHistoricalActivityEndTime(activityIndex)
+				FixHistoricalActivityEndTime(self.activityId)
 			}
 			
-			if SaveHistoricalActivitySummaryData(activityIndex) {
-				LoadHistoricalActivitySummaryData(activityIndex)
-				LoadHistoricalActivityLapData(activityIndex)
+			if SaveHistoricalActivitySummaryData(self.activityId) {
+				if LoadHistoricalActivitySummaryData(self.activityId) == false {
+					NSLog("Failed to load historical activity summary data.")
+				}
+				if LoadHistoricalActivityLapData(self.activityId) == false {
+					NSLog("Failed to load historical activity lap data.")
+				}
 			}
 		}
 	}
@@ -440,6 +465,9 @@ class LiveActivityVM : ObservableObject {
 			self.isPaused = false
 			self.autoStartEnabled = false
 			
+			// Start the activity in HealthKit.
+			HealthManager.shared.startWorkout(activityType: self.activityType, startTime: Date())
+
 			// Tell any subscribers that we've started an activity.
 			var notificationData: Dictionary<String, String> = [:]
 			notificationData[KEY_NAME_ACTIVITY_ID] = self.activityId
@@ -499,6 +527,9 @@ class LiveActivityVM : ObservableObject {
 			summary.endTime = Date(timeIntervalSince1970: TimeInterval(endTime.value.intVal))
 			summary.source = ActivitySummary.Source.database
 			
+			// Stop the activity in HealthKit.
+			HealthManager.shared.stopWorkout(endTime: summary.endTime)
+
 			// Tell any subscribers that we've stopped an activity.
 			var notificationData: Dictionary<String, Any> = [:]
 			notificationData[KEY_NAME_ACTIVITY_ID] = self.activityId
@@ -525,7 +556,13 @@ class LiveActivityVM : ObservableObject {
 	
 	/// @brief Starts a new lap.
 	func lap() {
-		StartNewLap()
+		if StartNewLap() {
+			var startTimeMs: UInt64 = 0
+
+			if MetaDataForLap(NumLaps(), &startTimeMs, nil, nil, nil) {
+				let _ = ApiClient.shared.startNewLap(activityId: self.activityId, startTimeMs: startTimeMs)
+			}
+		}
 	}
 	
 	func getCurrentActivityType() -> String {
@@ -583,147 +620,6 @@ class LiveActivityVM : ObservableObject {
 	
 	func getWatchActivityAttributeColor(attributeName: String) -> Color {
 		return ActivityPreferences.getActivityAttributeColor(activityType: self.activityType, attributeName: attributeName)
-	}
-
-	/// @brief Utility function for converting an activity attribute structure to something human readable.
-	static func formatActivityValue(attribute: ActivityAttributeType) -> String {
-		if attribute.valid {
-			switch attribute.valueType {
-			case TYPE_NOT_SET:
-				return VALUE_NOT_SET_STR
-			case TYPE_TIME:
-				return StringUtils.formatSeconds(numSeconds: attribute.value.timeVal)
-			case TYPE_DOUBLE:
-				if attribute.measureType == MEASURE_DISTANCE {
-					return String(format: "%0.2f", attribute.value.doubleVal)
-				}
-				else if attribute.measureType == MEASURE_POOL_DISTANCE {
-					return String(format: "%0.0f", attribute.value.doubleVal)
-				}
-				else if attribute.measureType == MEASURE_DEGREES {
-					return String(format: "%0.6f", attribute.value.doubleVal)
-				}
-				else if attribute.measureType == MEASURE_PERCENTAGE {
-					return String(format: "%0.1f", attribute.value.doubleVal * 1000.0)
-				}
-				else if attribute.measureType == MEASURE_BPM {
-					return String(format: "%0.0f", attribute.value.doubleVal)
-				}
-				else if attribute.measureType == MEASURE_RPM {
-					return String(format: "%0.0f", attribute.value.doubleVal)
-				}
-				else if attribute.measureType == MEASURE_CALORIES {
-					return String(format: "%0.0f", attribute.value.doubleVal)
-				}
-				else {
-					return String(format: "%0.1f", attribute.value.doubleVal)
-				}
-			case TYPE_INTEGER:
-				return String(format: "%llu", attribute.value.intVal)
-			default:
-				return ""
-			}
-		}
-		else {
-			return VALUE_NOT_SET_STR
-		}
-	}
-	
-	/// @brief Utility function for formatting unit strings.
-	static func formatActivityMeasureType(measureType: ActivityAttributeMeasureType) -> String {
-		switch measureType {
-		case MEASURE_NOT_SET:
-			return ""
-		case MEASURE_TIME:
-			return ""
-		case MEASURE_PACE:
-			let preferredUnits = Preferences.preferredUnitSystem()
-			if preferredUnits == UNIT_SYSTEM_METRIC {
-				return "mins/km"
-			}
-			else if preferredUnits == UNIT_SYSTEM_US_CUSTOMARY {
-				return "mins/mile"
-			}
-			return ""
-		case MEASURE_SPEED:
-			let preferredUnits = Preferences.preferredUnitSystem()
-			if preferredUnits == UNIT_SYSTEM_METRIC {
-				return "kph"
-			}
-			else if preferredUnits == UNIT_SYSTEM_US_CUSTOMARY {
-				return "mph"
-			}
-			return ""
-		case MEASURE_DISTANCE:
-			let preferredUnits = Preferences.preferredUnitSystem()
-			if preferredUnits == UNIT_SYSTEM_METRIC {
-				return "kms"
-			}
-			else if preferredUnits == UNIT_SYSTEM_US_CUSTOMARY {
-				return "miles"
-			}
-			return ""
-		case MEASURE_POOL_DISTANCE:
-			let preferredUnits = Preferences.preferredUnitSystem()
-			if preferredUnits == UNIT_SYSTEM_METRIC {
-				return "meters"
-			}
-			else if preferredUnits == UNIT_SYSTEM_US_CUSTOMARY {
-				return "yards"
-			}
-			return ""
-		case MEASURE_WEIGHT:
-			let preferredUnits = Preferences.preferredUnitSystem()
-			if preferredUnits == UNIT_SYSTEM_METRIC {
-				return "kgs"
-			}
-			else if preferredUnits == UNIT_SYSTEM_US_CUSTOMARY {
-				return "lbs"
-			}
-			return ""
-		case MEASURE_HEIGHT:
-			let preferredUnits = Preferences.preferredUnitSystem()
-			if preferredUnits == UNIT_SYSTEM_METRIC {
-				return "cm"
-			}
-			else if preferredUnits == UNIT_SYSTEM_US_CUSTOMARY {
-				return "inches"
-			}
-			return ""
-		case MEASURE_ALTITUDE:
-			let preferredUnits = Preferences.preferredUnitSystem()
-			if preferredUnits == UNIT_SYSTEM_METRIC {
-				return "meters"
-			}
-			else if preferredUnits == UNIT_SYSTEM_US_CUSTOMARY {
-				return "ft"
-			}
-			return ""
-		case MEASURE_COUNT:
-			return ""
-		case MEASURE_BPM:
-			return "bpm"
-		case MEASURE_POWER:
-			return "watts"
-		case MEASURE_CALORIES:
-			return "kcal"
-		case MEASURE_DEGREES:
-			return "deg"
-		case MEASURE_G:
-			return "G"
-		case MEASURE_PERCENTAGE:
-			return "%"
-		case MEASURE_RPM:
-			return "rpm"
-		case MEASURE_LOCATION_ACCURACY:
-			return "meters"
-		case MEASURE_INDEX:
-			return ""
-		case MEASURE_ID:
-			return ""
-		default:
-			return ""
-		}
 	}
 	
 	func playBeepSound() {

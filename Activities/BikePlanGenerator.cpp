@@ -151,7 +151,7 @@ std::unique_ptr<Workout> BikePlanGenerator::GenerateEasyAerobicRide(double goalD
 		uint8_t intervalPower = powerDistribution(generator);
 		intervalPower = RoundDistance(intervalPower, 5);
 
-		workout->AddTimeAndPowerInterval(1, avgRideDuration, intervalPower, 0, 0);
+		workout->AddTimeAndPowerInterval(1, avgRideDuration, intervalPower / 100.0, 0, 0);
 	}
 	return workout;
 }
@@ -179,7 +179,7 @@ std::unique_ptr<Workout> BikePlanGenerator::GenerateTempoRide(void)
 		uint64_t numIntervalSeconds = intervalDistribution(generator) * 5 * 60;
 
 		workout->AddWarmup(warmupDuration);
-		workout->AddTimeAndPowerInterval(1, numIntervalSeconds, intervalPower, 0, 0);
+		workout->AddTimeAndPowerInterval(1, numIntervalSeconds, intervalPower / 100.0, 0, 0);
 		workout->AddCooldown(cooldownDuration);
 	}
 	return workout;
@@ -208,7 +208,7 @@ std::unique_ptr<Workout> BikePlanGenerator::GenerateSweetSpotRide(void)
 		uint64_t numIntervalSeconds = intervalDistribution(generator) * 5 * 60;
 
 		workout->AddWarmup(warmupDuration);
-		workout->AddTimeAndPowerInterval(1, numIntervalSeconds, intervalPower, 0, 0);
+		workout->AddTimeAndPowerInterval(1, numIntervalSeconds, intervalPower / 100.0, 0, 0);
 		workout->AddCooldown(cooldownDuration);
 	}
 	return workout;
@@ -244,6 +244,7 @@ WorkoutList BikePlanGenerator::GenerateWorkoutsForNextWeek(std::map<std::string,
 	double longestRideWeek3 = inputs.at(WORKOUT_INPUT_LONGEST_RIDE_WEEK_3);
 	double longestRideWeek4 = inputs.at(WORKOUT_INPUT_LONGEST_RIDE_WEEK_4);
 	double avgRideDuration = inputs.at(WORKOUT_INPUT_AVG_CYCLING_DURATION_IN_FOUR_WEEKS);
+	//double ftp = inputs.at(WORKOUT_INPUT_THRESHOLD_POWER);
 	bool hasBicycle = inputs.at(WORKOUT_INPUT_HAS_BICYCLE);
 
 	// The user doesn't have a bicycle, so return.
@@ -312,6 +313,17 @@ WorkoutList BikePlanGenerator::GenerateWorkoutsForNextWeek(std::map<std::string,
 		// Long distance triathlons
 		case GOAL_HALF_IRON_DISTANCE_TRIATHLON:
 		case GOAL_IRON_DISTANCE_TRIATHLON:
+			workouts.push_back(GenerateEasyAerobicRide(goalDistance, longestRideInFourWeeks, avgRideDuration));
+			if (inTaper || goalType == GOAL_TYPE_COMPLETION)
+				workouts.push_back(GenerateEasyAerobicRide(goalDistance, longestRideInFourWeeks, avgRideDuration));
+			else
+				workouts.push_back(GenerateIntervalSession(goalDistance));
+			break;
+
+		// Long bike ride
+		case GOAL_100K_BIKE_RIDE:
+		case GOAL_100_MILE_BIKE_RIDE:
+			workouts.push_back(GenerateEasyAerobicRide(goalDistance, longestRideInFourWeeks, avgRideDuration));
 			workouts.push_back(GenerateEasyAerobicRide(goalDistance, longestRideInFourWeeks, avgRideDuration));
 			if (inTaper || goalType == GOAL_TYPE_COMPLETION)
 				workouts.push_back(GenerateEasyAerobicRide(goalDistance, longestRideInFourWeeks, avgRideDuration));

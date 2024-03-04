@@ -4,6 +4,9 @@
 //
 
 import Foundation
+#if os(watchOS)
+import SwiftUI // for WKInterfaceDevice
+#endif
 
 func activityTypeCallback(name: Optional<UnsafePointer<Int8>>, context: Optional<UnsafeMutableRawPointer>) {
 	let activityType = String(cString: UnsafeRawPointer(name!).assumingMemoryBound(to: CChar.self))
@@ -24,8 +27,10 @@ class CommonApp : ObservableObject {
 		// Initialize the backend, including the database.
 		var baseUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
 		baseUrl = baseUrl.appendingPathComponent("Activities.sqlite")
-		Initialize(baseUrl.absoluteString)
-		
+		if Initialize(baseUrl.absoluteString) == false {
+			NSLog("Initialize failed.")
+		}
+
 		// Build the list of activity types the backend can handle.
 		CommonApp.activityTypes = []
 #if os(watchOS)
@@ -33,7 +38,12 @@ class CommonApp : ObservableObject {
 #else
 		GetActivityTypes(activityTypeCallback, nil, true, false, true)
 #endif
-		
+
+		// Enable battery monitoring.
+#if os(watchOS)
+		WKInterfaceDevice.current().isBatteryMonitoringEnabled = true
+#endif
+
 		// Do we have a device ID, because we should?
 		if Preferences.uuid() == nil {
 			Preferences.setUuid(value: UUID().uuidString)
@@ -59,7 +69,7 @@ class CommonApp : ObservableObject {
 		self.watchSession.startWatchSession()
 		
 		// Send the user's details to the backend.
-		self.setUserProfile()
+		self.updateUserProfile()
 		
 		// Things we care about knowing from the server.
 		NotificationCenter.default.addObserver(self, selector: #selector(self.loginStatusUpdated), name: Notification.Name(rawValue: NOTIFICATION_NAME_LOGIN_CHECKED), object: nil)
@@ -68,6 +78,7 @@ class CommonApp : ObservableObject {
 		NotificationCenter.default.addObserver(self, selector: #selector(self.logoutProcessed), name: Notification.Name(rawValue: NOTIFICATION_NAME_LOGGED_OUT), object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(self.friendsListUpdated), name: Notification.Name(rawValue: NOTIFICATION_NAME_FRIENDS_LIST_UPDATED), object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(self.requestToFollowResponse), name: Notification.Name(rawValue: NOTIFICATION_NAME_REQUEST_TO_FOLLOW_RESULT), object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(self.requestUserSettingsResponse), name: Notification.Name(rawValue: NOTIFICATION_NAME_REQUEST_USER_SETTINGS_RESULT), object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(self.downloadedActivityReceived), name: Notification.Name(rawValue: NOTIFICATION_NAME_DOWNLOADED_ACTIVITY), object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(self.gearListUpdated), name: Notification.Name(rawValue: NOTIFICATION_NAME_GEAR_LIST_UPDATED), object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(self.plannedWorkoutsUpdated), name: Notification.Name(rawValue: NOTIFICATION_NAME_PLANNED_WORKOUTS_UPDATED), object: nil)
@@ -83,7 +94,7 @@ class CommonApp : ObservableObject {
 	}
 	
 	/// @brief Sends the user's details to the backend. Should be called on application startup as well as whenever the values are changed.
-	func setUserProfile() {
+	func updateUserProfile() {
 		let userLevel = Preferences.activityLevel()
 		let userGender = Preferences.biologicalGender()
 		let userBirthdate = Preferences.birthDate()
@@ -95,7 +106,7 @@ class CommonApp : ObservableObject {
 		let vo2Max = Preferences.vo2Max()
 		let bestRecent5KSecs = Preferences.bestRecent5KSecs()
 
-		SetUserProfile(userLevel, userGender, userBirthdate, userWeightKg, userHeightCm, ftp, restingHr, maxHr, vo2Max, bestRecent5KSecs)
+		SetUserProfile(userLevel, userGender, userBirthdate, userWeightKg, userHeightCm, ftp, restingHr, maxHr, vo2Max, bestRecent5KSecs, 5000.0)
 	}
 	
 	func markAsSynchedToWeb(activityId: String) -> Bool {
@@ -110,8 +121,8 @@ class CommonApp : ObservableObject {
 		return CreateActivitySync(activityId, SYNC_DEST_WATCH)
 	}
 	
-	func exportActivityToWeb(activityId: String) throws {
-		/*let summary = ActivitySummary()
+	func exportActivityToWeb(activityId: String) async throws {
+		let summary = ActivitySummary()
 		summary.id = activityId
 		summary.source = ActivitySummary.Source.database
 		
@@ -121,9 +132,9 @@ class CommonApp : ObservableObject {
 		let fileName = try storedActivityVM.exportActivityToTempFile(fileFormat: FILE_GPX)
 		let fileUrl = URL(string: "file://" + fileName)
 		let fileContents = try Data(contentsOf: fileUrl!)
-		let _ = self.apiClient.sendActivity(activityId: summary.id, name: fileUrl!.lastPathComponent, contents: fileContents)
+		let _ = ApiClient.shared.sendActivity(activityId: summary.id, name: fileUrl!.lastPathComponent, contents: fileContents)
 		
-		try FileManager.default.removeItem(at: fileUrl!)*/
+		try FileManager.default.removeItem(at: fileUrl!)
 	}
 	
 	@objc func loginStatusUpdated(notification: NSNotification) {
@@ -131,6 +142,8 @@ class CommonApp : ObservableObject {
 			if let responseCode = data[KEY_NAME_RESPONSE_CODE] as? HTTPURLResponse {
 				if responseCode.statusCode == 200 {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_SUCCESS
+					
+					// This will request all the things we need from the server.
 					let _ = ApiClient.shared.syncWithServer()
 				}
 				else {
@@ -170,7 +183,8 @@ class CommonApp : ObservableObject {
 							}
 						}
 						
-						let _ = ApiClient.shared.syncWithServer() // re-sync
+						// This will request all the things we need from the server.
+						let _ = ApiClient.shared.syncWithServer()
 					}
 					else {
 						ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_FAILURE
@@ -187,7 +201,9 @@ class CommonApp : ObservableObject {
 			if let responseCode = data[KEY_NAME_RESPONSE_CODE] as? HTTPURLResponse {
 				if responseCode.statusCode == 200 {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_SUCCESS
-					let _ = ApiClient.shared.syncWithServer() // re-sync
+
+					// This will request all the things we need from the server.
+					let _ = ApiClient.shared.syncWithServer()
 				}
 				else {
 					ApiClient.shared.loginStatus = LoginStatus.LOGIN_STATUS_FAILURE
@@ -242,6 +258,31 @@ class CommonApp : ObservableObject {
 		}
 	}
 	
+	@objc func requestUserSettingsResponse(notification: NSNotification) {
+		do {
+			if let data = notification.object as? Dictionary<String, AnyObject> {
+				if let responseData = data[KEY_NAME_RESPONSE_DATA] as? Data {
+					if let responseArray = try JSONSerialization.jsonObject(with: responseData, options: []) as? [Any] {
+						for item in responseArray {
+							if let itemDict = item as? Dictionary<String, AnyObject> {
+								if let firstItem = itemDict.first {
+									if firstItem.key == WORKOUT_INPUT_GOAL_TYPE {
+										if let value = firstItem.value as? String {
+											Preferences.setWorkoutGoal(value: WorkoutsVM.workoutGoalStringToEnum(goalStr: value))
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		catch {
+			NSLog(error.localizedDescription)
+		}
+	}
+	
 	@objc func downloadedActivityReceived(notification: NSNotification) {
 		do {
 			if let data = notification.object as? Dictionary<String, AnyObject> {
@@ -253,7 +294,6 @@ class CommonApp : ObservableObject {
 
 					if let queryItems = components.queryItems {
 						var activityId: String?
-						var activityType: String = ""
 						var exportFormat: String?
 
 						// Grab the activity ID and file format out of the URL parameters.
@@ -273,7 +313,10 @@ class CommonApp : ObservableObject {
 							
 							if fullUrl != nil {
 								try responseData.write(to: fullUrl!)
-								ImportActivityFromFile(fullUrl?.absoluteString, activityType, activityId)
+
+								if ImportActivityFromFile(fullUrl?.absoluteString, "", activityId) == false {
+									NSLog("Import failed!")
+								}
 								try FileManager.default.removeItem(at: fullUrl!)
 							}
 						}
@@ -410,7 +453,12 @@ class CommonApp : ObservableObject {
 						switch (code) {
 						case ACTIVITY_MATCH_CODE_NO_ACTIVITY:
 							// Send the activity - server has never heard of this activity.
-							try app.exportActivityToWeb(activityId: activityId)
+							Task.init {
+								do {
+									try await app.exportActivityToWeb(activityId: activityId)
+								} catch {
+								}
+							}
 							break
 						case ACTIVITY_MATCH_CODE_HASH_NOT_COMPUTED:
 							// Mark it as synced - server already has this activity, but it could be different.
@@ -454,16 +502,22 @@ class CommonApp : ObservableObject {
 							let tags = responseDict[PARAM_ACTIVITY_TAGS]
 							
 							if activityName != nil {
-								UpdateActivityName(activityId, activityName as? String)
+								if UpdateActivityName(activityId, activityName as? String) == false {
+									NSLog("Update activity name failed.")
+								}
 							}
 							if activityDesc != nil {
-								UpdateActivityDescription(activityId, activityDesc as? String)
+								if UpdateActivityDescription(activityId, activityDesc as? String) == false {
+									NSLog("Update activity description failed.")
+								}
 							}
 							if tags != nil {
 								let tagsList = tags as? [String]
 								for tag in tagsList! {
 									if !HasTag(activityId, tag) {
-										CreateTag(activityId, tag)
+										if CreateTag(activityId, tag) == false {
+											NSLog("Create tag failed.")
+										}
 									}
 								}
 							}

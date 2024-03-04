@@ -18,11 +18,17 @@ enum ExportDest {
 	case email, icloud
 }
 
-let INSET = EdgeInsets(top: 0, leading: 5, bottom: 5, trailing: 10)
+let INSET = EdgeInsets(top: 0, leading: 0, bottom: 5, trailing: 5)
 
 class MailComposeViewController: UIViewController, MFMailComposeViewControllerDelegate {
 	
 	func displayEmailComposerSheet(subjectStr: String, bodyStr: String, fileName: String, mimeType: String) throws {
+		let keyWindow = UIApplication.shared.connectedScenes
+			.filter({$0.activationState == .foregroundActive})
+			.compactMap({$0 as? UIWindowScene})
+			.first?.windows
+			.filter({$0.isKeyWindow}).first
+
 		if MFMailComposeViewController.canSendMail() {
 			let mail = MFMailComposeViewController()
 			
@@ -39,14 +45,14 @@ class MailComposeViewController: UIViewController, MFMailComposeViewControllerDe
 				mail.addAttachmentData(data, mimeType: mimeType, fileName: justTheFileName)
 			}
 
-			UIApplication.shared.keyWindow?.rootViewController?.present(mail, animated: true)
+			keyWindow?.rootViewController?.present(mail, animated: true)
 		}
 		else {
 			let alert = UIAlertController(title: "Error", message: "Sending email is not available on this device.", preferredStyle: .alert)
 
 			alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
 			}))
-			UIApplication.shared.keyWindow?.rootViewController?.present(alert, animated: true)
+			keyWindow?.rootViewController?.present(alert, animated: true)
 		}
 	}
 	
@@ -56,6 +62,11 @@ class MailComposeViewController: UIViewController, MFMailComposeViewControllerDe
 }
 
 struct HistoryDetailsView: View {
+	enum Field: Hashable {
+		case name
+		case description
+	}
+
 	@Environment(\.colorScheme) var colorScheme
 	@Environment(\.dismiss) var dismiss
 	@StateObject var activityVM: StoredActivityVM
@@ -77,6 +88,7 @@ struct HistoryDetailsView: View {
 	@State private var activityTrimFromStart: Bool = true
 	@State private var selectedImage: UIImage = UIImage()
 	@ObservedObject private var apiClient = ApiClient.shared
+	@FocusState private var focusedField: Field?
 
 	func hrFormatter(num: Double) -> String {
 		return String(format: "%0.0f", num)
@@ -117,11 +129,10 @@ struct HistoryDetailsView: View {
 								span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
 							)
 							
-							MapWithPolyline(region: region, trackUser: false)
+							MapWithPolyline(region: region, trackUser: false, updates: false)
 								.setOverlay(self.activityVM.trackLine)
 								.ignoresSafeArea()
 								.frame(height: 300)
-								.padding(INSET)
 						}
 					}
 
@@ -131,8 +142,11 @@ struct HistoryDetailsView: View {
 							.onChange(of: self.activityVM.name) { value in
 								self.showingUpdateNameError = !self.activityVM.updateActivityName()
 							}
+							.lineLimit(2...4)
+							.focused(self.$focusedField, equals: .name)
 							.alert("Failed to update the name!", isPresented: self.$showingUpdateNameError) { }
 							.font(Font.headline)
+							.padding(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
 					}
 					.padding(INSET)
 
@@ -143,8 +157,10 @@ struct HistoryDetailsView: View {
 								self.showingUpdateDescriptionError = !self.activityVM.updateActivityDescription()
 							}
 							.lineLimit(2...10)
+							.focused(self.$focusedField, equals: .description)
 							.alert("Failed to update the description!", isPresented: self.$showingUpdateDescriptionError) { }
-							.font(Font.body)
+							.font(Font.subheadline)
+							.padding(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
 					}
 					.padding(INSET)
 
@@ -305,6 +321,11 @@ struct HistoryDetailsView: View {
 			}
 			.padding(10)
 			.toolbar {
+				ToolbarItem(placement: .keyboard) {
+					Button("Done") {
+						self.focusedField = nil
+					}
+				}
 				ToolbarItem(placement: .bottomBar) {
 					HStack() {
 						// Delete button
@@ -337,11 +358,11 @@ struct HistoryDetailsView: View {
 								Label("Edit", systemImage: "pencil")
 							}
 							.confirmationDialog("Edit", isPresented: self.$showingEditSelection, titleVisibility: .visible) {
-								if IsHistoricalActivityLiftingActivity(self.activityVM.activityIndex) {
+								if IsHistoricalActivityLiftingActivity(self.activityVM.activityId) {
 									Button("Fix Repetition Count") {
 										let newValue = InitializeActivityAttribute(TYPE_INTEGER, MEASURE_COUNT, UNIT_SYSTEM_METRIC)
-										SetHistoricalActivityAttribute(self.activityVM.activityIndex, ACTIVITY_ATTRIBUTE_REPS_CORRECTED, newValue)
-										SaveHistoricalActivitySummaryData(self.activityVM.activityIndex)
+										SetHistoricalActivityAttribute(self.activityVM.activityId, ACTIVITY_ATTRIBUTE_REPS_CORRECTED, newValue)
+										SaveHistoricalActivitySummaryData(self.activityVM.activityId)
 									}
 								}
 								Button("Change Activity Type") {
@@ -453,7 +474,7 @@ struct HistoryDetailsView: View {
 								}
 							}
 							.confirmationDialog("Export", isPresented: self.$showingFormatSelection, titleVisibility: .visible) {
-								if IsHistoricalActivityMovingActivity(self.activityVM.activityIndex) {
+								if IsHistoricalActivityMovingActivity(self.activityVM.activityId) {
 									Button("GPX") {
 										do {
 											if self.exportDestination == ExportDest.icloud {

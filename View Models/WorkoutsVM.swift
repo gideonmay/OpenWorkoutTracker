@@ -17,6 +17,8 @@ let STR_SPRINT_TRIATHLON =             "Sprint Triathlon"
 let STR_OLYMPIC_TRIATHLON =            "Olympic Triathlon"
 let STR_HALF_IRON_DISTANCE_TRIATHLON = "Half Iron Distance Triathlon"
 let STR_IRON_DISTANCE_TRIATHLON =      "Iron Distance Triathlon"
+let STR_100K_BIKE_RIDE =               "100K Bike Ride"
+let STR_100_MILE_BIKE_RIDE =           "100 Mile Bike Ride"
 
 let STR_COMPLETION =                   "Completion"
 let STR_SPEED =                        "Speed"
@@ -169,6 +171,9 @@ class WorkoutsVM : ObservableObject {
 	}
 
 	func regenerateWorkouts() throws {
+		// Load activities from the database.
+		InitializeHistoricalActivityList()
+
 		// Add HealthKit activities as inputs to the workout generation algorithm.
 		// We'll de-dupe the list to make sure we're not double-counting anything.
 		let healthMgr = HealthManager.shared
@@ -253,6 +258,10 @@ class WorkoutsVM : ObservableObject {
 			return STR_HALF_IRON_DISTANCE_TRIATHLON
 		case GOAL_IRON_DISTANCE_TRIATHLON:
 			return STR_IRON_DISTANCE_TRIATHLON
+		case GOAL_100K_BIKE_RIDE:
+			return STR_100K_BIKE_RIDE
+		case GOAL_100_MILE_BIKE_RIDE:
+			return STR_100_MILE_BIKE_RIDE
 		default:
 			break
 		}
@@ -295,6 +304,12 @@ class WorkoutsVM : ObservableObject {
 		}
 		if goalStr == STR_IRON_DISTANCE_TRIATHLON {
 			return GOAL_IRON_DISTANCE_TRIATHLON
+		}
+		if goalStr == STR_100K_BIKE_RIDE {
+			return GOAL_100K_BIKE_RIDE
+		}
+		if goalStr == STR_100_MILE_BIKE_RIDE {
+			return GOAL_100_MILE_BIKE_RIDE
 		}
 		return GOAL_FITNESS
 	}

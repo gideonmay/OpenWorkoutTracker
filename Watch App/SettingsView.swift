@@ -15,6 +15,7 @@ struct SettingsView: View {
 	@State private var allowPressesDuringActivity: Bool = Preferences.watchAllowPressesDuringActivity()
 	@State private var turnCrown: Bool = Preferences.watchTurnCrownToStartStopActivity()
 	@State private var showingResetConfirmation: Bool = false
+	@StateObject private var sensorMgr = SensorMgr.shared
 
 	var body: some View {
 		VStack(alignment: .center) {
@@ -56,8 +57,29 @@ struct SettingsView: View {
 					Toggle("Bluetooth Sensors", isOn: self.$btSensorsEnabled)
 						.onChange(of: self.btSensorsEnabled) { value in
 							Preferences.setScanForSensors(value: self.btSensorsEnabled)
+							if self.btSensorsEnabled {
+								SensorMgr.shared.startSensors(usableSensors: [])
+							}
+							else {
+								SensorMgr.shared.stopSensors()
+							}
 						}
 						.padding(5)
+					ForEach(self.sensorMgr.peripherals) { sensor in
+						HStack() {
+							Text(sensor.name)
+							Spacer()
+							Button(sensor.enabled ? "Disconnect" : "Connect") {
+								sensor.enabled = !sensor.enabled
+								if sensor.enabled {
+									Preferences.addPeripheralToUse(uuid: sensor.id.uuidString)
+								}
+								else {
+									Preferences.removePeripheralFromUseList(uuid: sensor.id.uuidString)
+								}
+							}
+						}
+					}
 				}
 				
 				Group() {
@@ -103,6 +125,16 @@ struct SettingsView: View {
 					}
 				}
 			}
+		}
+		.onAppear() {
+			self.broadcastEnabled = Preferences.shouldBroadcastToServer()
+			self.preferMetric = Preferences.preferredUnitSystem() == UNIT_SYSTEM_METRIC
+			self.heartRateEnabled = Preferences.useWatchHeartRate()
+			self.btSensorsEnabled = Preferences.shouldScanForSensors()
+			self.runSplitBeeps = Preferences.watchRunSplitBeeps()
+			self.startStopBeeps = Preferences.watchStartStopBeeps()
+			self.allowPressesDuringActivity = Preferences.watchAllowPressesDuringActivity()
+			self.turnCrown = Preferences.watchTurnCrownToStartStopActivity()
 		}
 		.padding(10)
     }

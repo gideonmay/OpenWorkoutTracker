@@ -34,7 +34,6 @@ MovingActivity::MovingActivity() : Activity()
 	m_previousLocSet = false;
 	m_prevDistanceTraveledRawM = (double)0.0;
 	m_distanceTraveledRawM = (double)0.0;
-	m_prevDistanceTraveledSmoothedM = (double)0.0;
 	m_distanceTraveledSmoothedM = (double)0.0;
 	m_totalAscentM = (double)0.0;
 	m_currentGradient = (double)0.0;
@@ -72,7 +71,6 @@ MovingActivity::~MovingActivity()
 	m_altitudeBuffer.clear();
 	m_coordinates.clear();
 	m_distances.clear();
-	m_smoothedDistances.clear();
 	m_laps.clear();
 	m_splitTimesKMs.clear();
 	m_splitTimesMiles.clear();
@@ -347,6 +345,52 @@ void MovingActivity::UpdateSplitTimes(void)
 	}
 }
 
+void MovingActivity::SmoothRecentCoordinates()
+{
+	const double T = 0.1;
+
+	// Append the most recent.
+	m_smoothedLocBuffer.push_back(m_currentLoc);
+
+	// Not enough data.
+	size_t numPoints = m_smoothedLocBuffer.size();
+	if (numPoints < 3)
+	{
+		return;
+	}
+	
+	for (size_t i = numPoints - 1; i > numPoints - 3; --i)
+	{
+		for (size_t j = 0; j < i; ++j)
+		{
+			Coordinate& current = m_smoothedLocBuffer.at(j);
+			const Coordinate& next = m_smoothedLocBuffer.at(j + 1);
+
+			current.latitude = current.latitude + T * (next.latitude - current.latitude);
+			current.longitude = current.longitude + T * (next.longitude - current.longitude);
+			current.altitude = current.altitude + T * (next.altitude - current.altitude);
+		}
+	}
+	
+	// We only need the last three points.
+	m_smoothedLocBuffer.erase(m_smoothedLocBuffer.begin());
+}
+
+void MovingActivity::UpdateSmoothedDistances()
+{
+	// Not enough data.
+	size_t numPoints = m_smoothedLocBuffer.size();
+	if (numPoints < 2)
+	{
+		return;
+	}
+
+	const Coordinate& currentLoc = m_smoothedLocBuffer.at(numPoints - 1);
+	const Coordinate& prevLoc = m_smoothedLocBuffer.at(numPoints - 2);
+
+	m_distanceTraveledSmoothedM += LibMath::Distance::haversineDistance(prevLoc.latitude, prevLoc.longitude, prevLoc.altitude, currentLoc.latitude, currentLoc.longitude, currentLoc.altitude);
+}
+
 bool MovingActivity::ProcessLocationReading(const SensorReading& reading)
 {
 	SetPrevDistanceTraveledInMeters(DistanceTraveledInMeters());
@@ -383,26 +427,24 @@ bool MovingActivity::ProcessLocationReading(const SensorReading& reading)
 
 	double currAlt = RunningAltitudeAverage();
 
-	// Update the total ascent.
-	if (currAlt > prevAlt)
-	{
-		m_totalAscentM += currAlt - prevAlt;
-	}
-
 	m_coordinates.push_back(m_currentLoc);
 
 	if (m_previousLocSet)
 	{
 		TimeDistancePair distanceInfo;
 
+		// Update the total ascent.
+		if (currAlt > prevAlt)
+		{
+			m_totalAscentM += currAlt - prevAlt;
+		}
+		
 		// Compute the raw distance.
 		distanceInfo.verticalDistanceM = m_currentLoc.altitude - m_previousLoc.altitude;
 		distanceInfo.distanceM = LibMath::Distance::haversineDistance(m_previousLoc.latitude, m_previousLoc.longitude, m_previousLoc.altitude, m_currentLoc.latitude, m_currentLoc.longitude, m_currentLoc.altitude);
 		distanceInfo.time = reading.time;
 		m_distances.push_back(distanceInfo);
 		SetDistanceTraveledInMeters(DistanceTraveledInMeters() + distanceInfo.distanceM);
-
-		// Compute the smoothed distance.
 
 		// Are we moving (horizontally)? If so, update horizontal speed.
 		if (distanceInfo.distanceM >= (double)MIN_METERS_MOVED)
@@ -424,6 +466,10 @@ bool MovingActivity::ProcessLocationReading(const SensorReading& reading)
 			m_stoppedTimeMS += reading.time - m_previousLoc.time;
 		}
 
+		// Compute the smoothed distance.
+		this->SmoothRecentCoordinates();
+		this->UpdateSmoothedDistances();
+		
 		// Update vertical speed.
 		SegmentType currentVerticalSpeed = CurrentVerticalSpeed();
 		if ((m_fastestVerticalSpeed.value.doubleVal < (double)0.00001) || (currentVerticalSpeed.value.doubleVal < m_fastestVerticalSpeed.value.doubleVal))
@@ -439,13 +485,23 @@ bool MovingActivity::ProcessLocationReading(const SensorReading& reading)
 		}
 		
 		// Update current gradient.
-		if (distanceInfo.distanceM > 0.00001)
+		if (distanceInfo.distanceM > 0.001)
 		{
 			m_currentGradient = distanceInfo.verticalDistanceM / distanceInfo.distanceM;
 		}
 		else
 		{
 			m_currentGradient = (double)0.0;
+		}
+		
+		// Update the average gradient for the course.
+		if (m_coordinates.size() > 0)
+		{
+			m_avgGradient = (m_currentLoc.altitude - m_coordinates.at(0).altitude) / m_distanceTraveledRawM;
+		}
+		else
+		{
+			m_avgGradient = (double)0.0;
 		}
 
 		RecomputeRecordTimes();
@@ -572,6 +628,13 @@ ActivityAttributeType MovingActivity::QueryActivityAttribute(const std::string& 
 		result.measureType = MEASURE_PERCENTAGE;
 		result.valid = true;
 	}
+	else if (attributeName.compare(ACTIVITY_ATTRIBUTE_AVG_GRADIENT) == 0)
+	{
+		result.value.doubleVal = m_avgGradient;
+		result.valueType = TYPE_DOUBLE;
+		result.measureType = MEASURE_PERCENTAGE;
+		result.valid = true;
+	}
 	else if (attributeName.compare(ACTIVITY_ATTRIBUTE_GRADE_ADJUSTED_PACE) == 0)
 	{
 		SegmentType segment = GradeAdjustedPace();
@@ -634,7 +697,10 @@ ActivityAttributeType MovingActivity::QueryActivityAttribute(const std::string& 
 	}
 	else if (attributeName.compare(ACTIVITY_ATTRIBUTE_SMOOTHED_DISTANCE_TRAVELED) == 0)
 	{
-		result.valid = false;
+		result.value.doubleVal = SmoothedDistanceTraveled();
+		result.valueType = TYPE_DOUBLE;
+		result.measureType = MEASURE_DISTANCE;
+		result.valid = true;
 	}
 	else if (attributeName.compare(ACTIVITY_ATTRIBUTE_PREVIOUS_DISTANCE_TRAVELED) == 0)
 	{
@@ -1363,6 +1429,11 @@ double MovingActivity::DistanceTraveled(void) const
 	return UnitMgr::ConvertToPreferredDistanceFromMeters(DistanceTraveledInMeters());
 }
 
+double MovingActivity::SmoothedDistanceTraveled(void) const
+{
+	return UnitMgr::ConvertToPreferredDistanceFromMeters(SmoothedDistanceTraveledInMeters());
+}
+
 double MovingActivity::PrevDistanceTraveled(void) const
 {
 	return UnitMgr::ConvertToPreferredDistanceFromMeters(m_prevDistanceTraveledRawM);
@@ -1378,6 +1449,7 @@ void MovingActivity::BuildAttributeList(std::vector<std::string>& attributes) co
 	attributes.push_back(ACTIVITY_ATTRIBUTE_CURRENT_PACE);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_FASTEST_PACE);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_GRADIENT);
+	attributes.push_back(ACTIVITY_ATTRIBUTE_AVG_GRADIENT);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_GRADE_ADJUSTED_PACE);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_GAP_TO_TARGET_PACE);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_AVG_SPEED);
@@ -1423,6 +1495,7 @@ void MovingActivity::BuildSummaryAttributeList(std::vector<std::string>& attribu
 	attributes.push_back(ACTIVITY_ATTRIBUTE_MOVING_SPEED);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_FASTEST_SPEED);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_DISTANCE_TRAVELED);
+	attributes.push_back(ACTIVITY_ATTRIBUTE_SMOOTHED_DISTANCE_TRAVELED);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_FASTEST_10K);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_FASTEST_5K);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_FASTEST_MILE);
@@ -1432,6 +1505,7 @@ void MovingActivity::BuildSummaryAttributeList(std::vector<std::string>& attribu
 	attributes.push_back(ACTIVITY_ATTRIBUTE_STARTING_LONGITUDE);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_BIGGEST_CLIMB);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_TOTAL_ASCENT);
+	attributes.push_back(ACTIVITY_ATTRIBUTE_TOTAL_THREAT_COUNT);
 	attributes.push_back(ACTIVITY_ATTRIBUTE_NUM_LAPS);
 	Activity::BuildSummaryAttributeList(attributes);
 }

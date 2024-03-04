@@ -68,12 +68,12 @@ class ApiClient : ObservableObject {
 				// POST method, put the dictionary in the HTTP body
 				if method == "POST" {
 					let jsonData = try JSONSerialization.data(withJSONObject: data, options: [])
-					let text = String(data: jsonData, encoding: String.Encoding.utf8)!
-					let postLength = String(format: "%lu", text.count)
+					let jsonString = String(data: jsonData, encoding: String.Encoding.utf8)!
+					let postLength = String(format: "%lu", jsonString.count)
 					
 					request.setValue(postLength, forHTTPHeaderField: "Content-Length")
 					request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-					request.httpBody = text.data(using:.utf8)
+					request.httpBody = jsonString.data(using:.utf8)
 				}
 				
 				// GET method, append the parameters to the URL.
@@ -87,7 +87,7 @@ class ApiClient : ObservableObject {
 						}
 						newUrl = newUrl + datum.key.replacingOccurrences(of: " ", with: "%20")
 						newUrl = newUrl + "="
-						newUrl = newUrl + String(describing: datum.value)
+						newUrl = newUrl + String(describing: datum.value).replacingOccurrences(of: " ", with: "%20")
 						first = false
 					}
 					request.url = URL(string: newUrl)
@@ -157,6 +157,10 @@ class ApiClient : ObservableObject {
 							let notification = Notification(name: Notification.Name(rawValue: NOTIFICATION_NAME_REQUEST_TO_FOLLOW_RESULT), object: downloadedData)
 							NotificationCenter.default.post(notification)
 						}
+						else if url.contains(REMOTE_API_REQUEST_USER_SETTINGS_URL) {
+							let notification = Notification(name: Notification.Name(rawValue: NOTIFICATION_NAME_REQUEST_USER_SETTINGS_RESULT), object: downloadedData)
+							NotificationCenter.default.post(notification)
+						}
 						else if url.contains(REMOTE_API_EXPORT_ACTIVITY_URL) {
 							let notification = Notification(name: Notification.Name(rawValue: NOTIFICATION_NAME_DOWNLOADED_ACTIVITY), object: downloadedData)
 							NotificationCenter.default.post(notification)
@@ -170,6 +174,8 @@ class ApiClient : ObservableObject {
 						else if url.contains(REMOTE_API_CLAIM_DEVICE_URL) {
 						}
 						else if url.contains(REMOTE_API_UPDATE_ACTIVITY_METADATA_URL) {
+						}
+						else if url.contains(REMOTE_API_CREATE_NEW_LAP_URL) {
 						}
 						else if url.contains(REMOTE_API_LIST_UNSYNCHED_ACTIVITIES_URL) {
 							let notification = Notification(name: Notification.Name(rawValue: NOTIFICATION_NAME_UNSYNCHED_ACTIVITIES_LIST), object: downloadedData)
@@ -197,7 +203,7 @@ class ApiClient : ObservableObject {
 						}
 					}
 					else {
-						NSLog("Error code received from the server for " + url)
+						NSLog("Error code \(httpResponse.statusCode) received from the server for \(url)")
 					}
 				}
 			}
@@ -259,6 +265,32 @@ class ApiClient : ObservableObject {
 		let urlStr = self.buildApiUrlStr(request: REMOTE_API_LIST_GEAR_URL)
 		return self.makeRequest(url: urlStr, method: "GET", data: [:])
 	}
+
+	func createGear(item: GearSummary) throws -> Bool {
+		let urlStr = self.buildApiUrlStr(request: REMOTE_API_CREATE_GEAR_URL)
+		let jsonData = try JSONEncoder().encode(item)
+		guard let dictionary = try JSONSerialization.jsonObject(with: jsonData, options: .allowFragments) as? [String: Any] else {
+			return false
+		}
+		return self.makeRequest(url: urlStr, method: "POST", data: dictionary)
+	}
+
+	func updateGear(item: GearSummary) throws -> Bool {
+		let urlStr = self.buildApiUrlStr(request: REMOTE_API_UPDATE_GEAR_URL)
+		let jsonData = try JSONEncoder().encode(item)
+		guard let dictionary = try JSONSerialization.jsonObject(with: jsonData, options: .allowFragments) as? [String: Any] else {
+			return false
+		}
+		return self.makeRequest(url: urlStr, method: "POST", data: dictionary)
+	}
+
+	func deleteGear(gearId: UUID) -> Bool {
+		var deleteDict: Dictionary<String, String> = [:]
+		deleteDict[PARAM_GEAR_ID] = gearId.uuidString
+
+		let urlStr = self.buildApiUrlStr(request: REMOTE_API_DELETE_GEAR_URL)
+		return self.makeRequest(url: urlStr, method: "DELETE", data: deleteDict)
+	}
 	
 	func listPlannedWorkouts() -> Bool {
 		let urlStr = self.buildApiUrlStr(request: REMOTE_API_LIST_PLANNED_WORKOUTS_URL)
@@ -294,6 +326,23 @@ class ApiClient : ObservableObject {
 		return self.makeRequest(url: urlStr, method: "GET", data: postDict)
 	}
 
+	func requestUserSettings(settings: Array<String>) -> Bool {
+		var postDict: Dictionary<String, String> = [:]
+		postDict[PARAM_SETTINGS] = ""
+		
+		var first = true
+		for setting in settings {
+			if !first {
+				postDict[PARAM_SETTINGS]! += ","
+			}
+			postDict[PARAM_SETTINGS]! += setting
+			first = false
+		}
+
+		let urlStr = self.buildApiUrlStr(request: REMOTE_API_REQUEST_USER_SETTINGS_URL)
+		return self.makeRequest(url: urlStr, method: "GET", data: postDict)
+	}
+	
 	func exportActivity(activityId: String) -> Bool {
 		var postDict: Dictionary<String, String> = [:]
 		postDict[PARAM_ACTIVITY_ID] = activityId
@@ -343,6 +392,15 @@ class ApiClient : ObservableObject {
 		postDict[PARAM_ACTIVITY_NAME] = name
 		
 		let urlStr = self.buildApiUrlStr(request: REMOTE_API_UPDATE_ACTIVITY_METADATA_URL)
+		return self.makeRequest(url: urlStr, method: "POST", data: postDict)
+	}
+	
+	func startNewLap(activityId: String, startTimeMs: UInt64) -> Bool {
+		var postDict: Dictionary<String, String> = [:]
+		postDict[PARAM_ACTIVITY_ID] = activityId
+		postDict[PARAM_LAP_START_TIME] = String(startTimeMs)
+
+		let urlStr = self.buildApiUrlStr(request: REMOTE_API_CREATE_NEW_LAP_URL)
 		return self.makeRequest(url: urlStr, method: "POST", data: postDict)
 	}
 	
@@ -410,12 +468,12 @@ class ApiClient : ObservableObject {
 	}
 	
 	func deleteActivityPhoto(activityId: String, photoId: String) -> Bool {
-		var postDict: Dictionary<String, String> = [:]
-		postDict[PARAM_ACTIVITY_ID] = activityId
-		postDict[PARAM_ACTIVITY_PHOTO_ID] = photoId
+		var deleteDict: Dictionary<String, String> = [:]
+		deleteDict[PARAM_ACTIVITY_ID] = activityId
+		deleteDict[PARAM_ACTIVITY_PHOTO_ID] = photoId
 
 		let urlStr = self.buildApiUrlStr(request: REMOTE_API_DELETE_ACTIVITY_PHOTO_URL)
-		return self.makeRequest(url: urlStr, method: "DELETE", data: postDict)
+		return self.makeRequest(url: urlStr, method: "DELETE", data: deleteDict)
 	}
 	
 	func sendPlannedWorkouts(workoutsJson: String) -> Bool {
@@ -583,6 +641,7 @@ class ApiClient : ObservableObject {
 #if !os(watchOS)
 					result = result && self.listGear()
 					result = result && self.listPlannedWorkouts()
+					result = result && self.requestUserSettings(settings: [WORKOUT_INPUT_GOAL_TYPE])
 #endif
 					result = result && self.listIntervalSessions()
 					result = result && self.listPacePlans()

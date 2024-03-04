@@ -43,8 +43,9 @@
 #define PARAM_GEAR_DESCRIPTION                   "description"
 #define PARAM_GEAR_ADD_TIME                      "add_time"
 #define PARAM_GEAR_RETIRE_TIME                   "retire_time"
-#define PARAM_GEAR_LAST_UPDATED_TIME             "last_updated_time"
+#define PARAM_GEAR_INITIAL_DISTANCE              "initial_distance"
 #define PARAM_GEAR_SERVICE_HISTORY               "service_history"
+#define PARAM_GEAR_LAST_UPDATED_TIME             "last_updated_time"
 
 // Gear Service ID
 #define PARAM_GEAR_SERVICE_ID                    "service_id"
@@ -100,6 +101,12 @@
 #define PARAM_PACE_PLAN_ROUTE                    "route"
 #define PARAM_PACE_PLAN_LAST_UPDATED_TIME        "last updated time"
 
+// Routes
+#define PARAM_ROUTE_ID                           "id"
+#define PARAM_ROUTE_NAME                         "name"
+#define PARAM_ROUTE_DESCRIPTION                  "description"
+#define PARAM_ROUTE_COORDINATES                  "coordinates"
+
 // Activities
 #define PARAM_ACTIVITY_NAME                      "name"
 #define PARAM_ACTIVITY_TYPE                      "type"
@@ -107,3 +114,9 @@
 #define PARAM_ACTIVITY_TAGS                      "tags"
 #define PARAM_ACTIVITY_PHOTO_ID                  "photo id"
 #define PARAM_ACTIVITY_PHOTO_IDS                 "photo ids"
+
+// Laps
+#define PARAM_LAP_START_TIME                     "lap start time"
+
+// Settings
+#define PARAM_SETTINGS                           "requested settings"
