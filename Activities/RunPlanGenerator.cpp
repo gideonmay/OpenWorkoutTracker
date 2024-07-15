@@ -355,6 +355,9 @@ std::unique_ptr<Workout> RunPlanGenerator::GenerateLongRun(double longRunPace, d
 		longRunDistance = (double)5000.0;
 	double intervalDistanceMeters = RoundDistance(longRunDistance);
 
+	// Consider long runs closer to the event, with either a race pace effort at the end
+	// or a 5K repeats alternating between easy and race pace.
+
 	// Create the workout object.
 	std::unique_ptr<Workout> workout = WorkoutFactory::Create(WORKOUT_TYPE_LONG_RUN, ACTIVITY_TYPE_RUNNING);
 	if (workout)
@@ -569,7 +572,6 @@ WorkoutList RunPlanGenerator::GenerateWorkoutsForNextWeekEventGoal(std::map<std:
 	double totalIntensityWeek4 = inputs.at(WORKOUT_INPUT_TOTAL_INTENSITY_WEEK_4);
 	double avgRunDistance = inputs.at(WORKOUT_INPUT_AVG_RUNNING_DISTANCE_IN_FOUR_WEEKS);
 	double numRuns = inputs.at(WORKOUT_INPUT_NUM_RUNS_LAST_FOUR_WEEKS);
-	double expLevel = inputs.at(WORKOUT_INPUT_EXPERIENCE_LEVEL);
 
 	// Longest run in four weeks.
 	double longestRunInFourWeeks = std::max(std::max(longestRunWeek1, longestRunWeek2), std::max(longestRunWeek3, longestRunWeek4));
@@ -636,7 +638,10 @@ WorkoutList RunPlanGenerator::GenerateWorkoutsForNextWeekEventGoal(std::map<std:
 		double maxDistanceNeeded = this->MaxLongRunDistance(goalDistance);
 		double maxAttainableDistance = this->MaxAttainableDistance(longestRunInFourWeeks, weeksUntilGoal);
 		double stretchFactor = maxAttainableDistance / maxDistanceNeeded;  // Gives us an idea as to how much the user is ahead of schedule.
-		maxLongRunDistance = this->MaxLongRunDistance(goalDistance / stretchFactor);
+
+		if (stretchFactor < 1.0)
+			stretchFactor = 1.0;
+		maxLongRunDistance = this->MaxLongRunDistance(goalDistance) * stretchFactor;
 	}
 
 	// Handle situation in which the user is already meeting or exceeding the goal distance.
@@ -646,18 +651,8 @@ WorkoutList RunPlanGenerator::GenerateWorkoutsForNextWeekEventGoal(std::map<std:
 	}
 
 	// Distance ceilings for easy and tempo runs.
-	double maxEasyRunDistance;
-	double maxTempoRunDistance;
-	if (expLevel <= 5.0)
-	{
-		maxEasyRunDistance = longestRunInFourWeeks * 0.60;
-		maxTempoRunDistance = longestRunInFourWeeks * 0.40;
-	}
-	else
-	{
-		maxEasyRunDistance = longestRunInFourWeeks * 0.75;
-		maxTempoRunDistance = longestRunInFourWeeks * 0.50;
-	}
+	double maxEasyRunDistance = longestRunInFourWeeks * 0.90;
+	double maxTempoRunDistance = longestRunInFourWeeks * 0.50;
 
 	// Don't make any runs (other than intervals, tempo runs, etc.) shorter than this.
 	double minRunDistance = avgRunDistance * 0.5;
